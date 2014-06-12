@@ -1,0 +1,10 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+
+Name: libsurfman
+Description: Library Surface Manager Plugin
+Version: @VERSION@
+Libs: -L${libdir} -lsurfman @LIBXC_LIB@ @PTHREAD_LIB@ @LIBEVENT_LIB@
+Cflags: -I${includedir} @LIBEVENT_INC@

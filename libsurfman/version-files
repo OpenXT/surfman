@@ -1,0 +1,6 @@
+src/surfman-head.h.in
+src/surfman-tail.h
+src/prototypes.h
+src/ext_prototypes.h
+src/surfman.c
+src/project.h

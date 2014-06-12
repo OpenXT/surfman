@@ -1,0 +1,13 @@
+Please this before any modification in surfman API.
+
+Surfman API is currently in version 2. When you want
+to modify a structure to add new callbacks
+    1) Add them at the end of the structure in surfman-head.in;
+    2) Bump the minor/macro version number (version-minor, version-major);
+    3) Update surfman according the modification.
+
+Some ideas for a version 3 of the API:
+    - Add private field to store plugin's data;
+    - Split plugin structure in 2: one part for the callbacks, the
+    other for the data;
+    - Modify all callbacks according to the previous item.

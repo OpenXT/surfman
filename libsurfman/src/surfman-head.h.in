@@ -1,0 +1,823 @@
+/*  
+ * Copyright (c) 2012, Citrix Systems
+ * All rights reserved.
+ * 
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 
+ * Redistributions of source code must retain the above copyright notice,
+ * this list of conditions and the following disclaimer.
+ * 
+ * Redistributions in binary form must reproduce the above copyright
+ * notice, this list of conditions and the following disclaimer in the
+ * documentation and/or other materials provided with the distribution.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+ * TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ */
+
+/*
+ * Citrix XenClient Surface Manager plugin API
+ *
+ * Copyright Citrix Systems, Inc. All rights reserved.
+ * 
+ * Julian Pidancet <julian.pidancet@citrix.com>
+ * Jean Guyader <jean.guyader@citrix.com>
+ * James McKenzie <james.mckenzie@citrix.com>
+ */
+
+#ifndef __SURFMAN_H__
+# define __SURFMAN_H__
+
+/* Necessary for event handling */
+#include <event.h>
+#include <stdarg.h>
+
+# ifdef __cplusplus
+extern "C"
+{
+# endif
+
+    /*
+    ** Utils and debug tools, new version that does not pisses me off. Those reasons are:
+    ** - 1) Does not split a log in 2 lines
+    ** - 2) Uses syslog log levels instead of LOG_ERR only (so you can actually make use of rsyslog).
+    ** - 3) Makes surfman_message usage a bit more smooth.
+    ** EC.
+    */
+    typedef enum {
+        SURFMAN_FATAL = 0,
+        SURFMAN_ERROR = 3,
+        SURFMAN_WARNING = 4,
+        SURFMAN_INFO = 6,
+        SURFMAN_DEBUG = 7
+    } surfman_loglvl;
+
+    void surfman_message(surfman_loglvl level, const char *fmt, ...) __attribute__ ((format (printf, 2, 3)));
+    void surfman_vmessage(surfman_loglvl levl, const char *fmt, va_list ap);
+# define __log(level, level_string, fmt, ...) \
+    surfman_message(level, "%s:%s:%s:%d: " fmt "\n", level_string, __FILE__, __PRETTY_FUNCTION__, __LINE__, ## __VA_ARGS__)
+
+# define surfman_debug(fmt, ...) __log(SURFMAN_DEBUG, "Debug", fmt, ## __VA_ARGS__)
+# define surfman_info(fmt, ...) __log(SURFMAN_INFO, "Info", fmt, ## __VA_ARGS__)
+# define surfman_warning(fmt, ...) __log(SURFMAN_WARNING, "Warning", fmt, ## __VA_ARGS__)
+# define surfman_error(fmt, ...) __log(SURFMAN_ERROR, "Error", fmt, ## __VA_ARGS__)
+# define surfman_fatal(fmt, ...) __log(SURFMAN_FATAL, "Fatal", fmt, ## __VA_ARGS__)
+
+    /*
+    ** DEPRECATED. Utils and debug tools.
+    ** Please ignore and carry on.
+    */
+# define MESSAGE_INFO    (1UL <<  0)
+# define MESSAGE_WARNING (1UL <<  1)
+# define MESSAGE_ERROR   (1UL <<  2)
+# define MESSAGE_FATAL   (1UL <<  3)
+
+# define info(a...) message(MESSAGE_INFO,__FILE__,__PRETTY_FUNCTION__,__LINE__,a)
+# define warning(a...) message(MESSAGE_WARNING,__FILE__,__PRETTY_FUNCTION__,__LINE__,a)
+# define error(a...) message(MESSAGE_ERROR,__FILE__,__PRETTY_FUNCTION__,__LINE__,a)
+# define fatal(a...) message(MESSAGE_FATAL,__FILE__,__PRETTY_FUNCTION__,__LINE__,a)
+
+    /*
+    ** Version define
+    */
+# define SURFMAN_VERSION(major, minor, micro) ((major << 16) | (minor << 8) | (micro))
+    typedef uint32_t surfman_version_t;
+
+    /*
+    ** Version helpers to print and retrieve a version part
+    */
+# define SURFMAN_VERSION_MAJOR(version) (((version) >> 16) & 0xff)
+# define SURFMAN_VERSION_MINOR(version) (((version) >> 8) & 0xff)
+# define SURFMAN_VERSION_MICRO(version) ((version) & 0xff)
+# define SURFMAN_VERSION_FMT "%u.%u.%u"
+# define SURFMAN_VERSION_ARGS(version) SURFMAN_VERSION_MAJOR(version), SURFMAN_VERSION_MINOR(version), SURFMAN_VERSION_MICRO(version)
+
+    /*
+    ** The plugin should create a variable surfman_plugin_version
+    ** which its value is SURFMAN_API_VERSION.
+    ** Surfman will retrieve this variable to know which API is currently
+    ** used by the plugin.
+    */
+# define SURFMAN_API_VERSION SURFMAN_VERSION(@LIBSURFMAN_MAJOR_VERSION@, @LIBSURFMAN_MINOR_VERSION@, @LIBSURFMAN_MICRO_VERSION@)
+
+    /*
+    ** Type used for storing Page Frame Numbers.
+    */
+    typedef unsigned long pfn_t;
+
+    /*
+    ** Mapcache: Gives access to a guest physical address space.
+    */
+    struct mapcache;
+    typedef struct mapcache *mapcache_t;
+
+    /*
+    ** Guest I/O Handling.
+    */
+# define SURFMAN_IOHANDLE_MMIO 1
+# define SURFMAN_IOHANDLE_IOPORT 0
+    struct iohandle;
+    typedef struct iohandle *iohandle_t;
+
+    typedef uint32_t (*io_read_t)(uint64_t addr, void *priv);
+    typedef void (*io_write_t)(uint64_t addr, uint32_t data, void *priv);
+
+    typedef struct
+    {
+        io_read_t readb;
+        io_read_t readw;
+        io_read_t readl;
+        io_write_t writeb;
+        io_write_t writew;
+        io_write_t writel;
+    } io_ops_t;
+
+    /*
+    ** Return values
+    **
+    ** In case of a success, return SURFMAN_SUCCESS
+    ** in case of an error, return SURFMAN_ERROR and set errno accordingly
+    */
+# define SURFMAN_SUCCESS 0
+# define SURFMAN_ERROR   -1
+# define SURFMAN_NOMEM   -2
+
+    /*
+    ** Plugin Abstract type.
+    */
+
+    /*
+    ** surfman_monitor_t: Internal plugin representation of a physical monitor
+    **
+    ** This can contain any information that the plugin require to identify a
+    ** physical monitor.
+    **
+    */
+    typedef void * surfman_monitor_t;
+
+    /*
+    ** surfman_psurface_t: Internal plugin representation of a surface that
+    **                     can be applied onto a physical monitor while switching.
+    **
+    */
+    typedef void * surfman_psurface_t;
+
+    /*
+    ** surfman_vmonitor_t: Internal plugin representation of a monitor in the
+    **                     guest.
+    **
+    */
+    typedef void * surfman_vmonitor_t;
+
+    /*
+    ** Pair of monitor and psurface used to describe the content of a physical monitor
+    **
+    ** surfman_monitor_t is a plugin representation of a monitor.
+    ** psurface is the internal representation in the plugin of a surface.
+    **
+    ** A psurface can be applied onto a surface through the plugin::display
+    ** function.
+    **
+    ** In case the psurface field is NULL, the plugin is requested to stop
+    ** drawing the previous registered psurface on this monitor, and optionnaly
+    ** to blank the monitor.
+    **
+    ** When the psurface is applied onto a monitor some filter/effect can
+    ** be applied (opacity, viewport).
+    **
+    ** The opacity filter could be used to create a fading effect.
+    **
+    ** The viewport filter could be used to create a moving and scalling effect.
+    **
+    ** See the example bellow on how this struct gets used.
+    */
+    typedef struct
+    {
+        /*
+        ** monitor to apply the psurface on
+        */
+        surfman_monitor_t                           monitor;
+        /*
+        ** psurface to apply on the monitor
+        */
+        surfman_psurface_t                          psurface;
+
+        struct
+        {
+            struct
+            {
+                /*
+                ** opacity filter [0-255]: At 255 the psurface will be
+                **                         applied completly.
+                */
+                uint8_t     opaque;
+            }                                       opacity;
+            struct
+            {
+                /*
+                ** Viewport of the psurface in pixel: x, y, w, h
+                **   This describes a restangle that will be applied on
+                **   a destination rectangle on the monitor.
+                **
+                ** viewport of the monitor in pixel: x, y, w, h
+                **   This describe the destination retangle on the monitor
+                */
+                unsigned int    psurface_x;
+                unsigned int    psurface_y;
+                unsigned int    psurface_height;
+                unsigned int    psurface_width;
+                unsigned int    monitor_x;
+                unsigned int    monitor_y;
+                unsigned int    monitor_height;
+                unsigned int    monitor_width;
+            }                                       viewport;
+        }                                           effects;
+    } surfman_display_t;
+
+    enum surfman_surface_format
+    {
+        SURFMAN_FORMAT_UNKNOWN = 0x00,
+        SURFMAN_FORMAT_BGR565 = 0x01,
+        SURFMAN_FORMAT_BGRX8888 = 0x10,
+        SURFMAN_FORMAT_RGBX8888 = 0x20
+    };
+
+    typedef struct
+    {
+        /*
+        ** Information on the psurface
+        */
+
+        /*
+        ** width in pixel of the psurface
+        */
+        unsigned int        width;
+        /*
+        ** height in pixel of the psurface
+        */
+        unsigned int        height;
+    } surfman_psurface_info_t;
+
+    typedef struct
+    {
+        /*
+        ** Description of a surface
+        */
+
+        /*
+        ** width in pixel of the surface
+        */
+        unsigned int                width;
+        /*
+        ** height in pixel of a surface
+        */
+        unsigned int                height;
+        /*
+        ** stride: size of a line in bytes
+        */
+        unsigned int                stride;
+        /*
+        ** format of the surface, cf enum surfman_surface_format
+        */
+        enum surfman_surface_format format;
+        /*
+        ** Number of pages in the array
+        */
+        unsigned int                page_count;
+        /*
+        ** Domain ID the pages in the array belong to
+        */
+        int                         pages_domid;
+        /*
+        ** Private data reserved for libsurfman use
+        */
+        uint64_t                    priv;
+        /*
+        ** Framebuffer offset
+        */
+        size_t                      offset;
+        /*
+        ** Array of machine address where this surface is stored
+        */
+        pfn_t                       mfns[0];
+    } surfman_surface_t;
+
+    typedef struct
+    {
+        /*
+        ** bar id
+        */
+        uint8_t             id;
+
+        /*
+        ** Host address of the region, if any (passthrough case),
+        **  (uint64_t) -1 otherwise
+        */
+        uint64_t            hostaddr;
+
+        /*
+        ** Address in the guest space where the region is mapped.
+        */
+        uint64_t            guestaddr;
+
+        /*
+        ** Length of the region, in bytes.
+        */
+        int                 len;
+    } surfman_update_bar_t;
+
+# define SURFMAN_TIMING_ACTIVE           0
+# define SURFMAN_TIMING_SYNC_START       1
+# define SURFMAN_TIMING_SYNC_END         2
+# define SURFMAN_TIMING_TOTAL            3
+    typedef struct
+    {
+        /*
+        ** Pixel clock in hz of the physical monitor
+        */
+        unsigned int pix_clock_hz;
+
+        /*
+        ** Horizontal timings information of a physical monitor
+        */
+        unsigned int htimings[4];
+
+        /*
+        ** Vertical timings information of a physical monitor
+        */
+        unsigned int vtimings[4];
+    } surfman_monitor_mode_t;
+
+    typedef struct
+    {
+        /*
+        ** Unique connector identifier where the monitor is connected
+        ** to. It helps surfman to always bind a specific connector to
+        ** the same virtual CRTC in the guest.
+        */
+        int                                connectorid;
+
+        /*
+        ** Pointer a of prefered mode of this physical monitor
+        */
+        surfman_monitor_mode_t             *prefered_mode;
+        surfman_monitor_mode_t             *current_mode;
+
+        /*
+        ** Number of element in the modes array
+        */
+        unsigned int                        mode_count;
+
+        /*
+        ** Array of modes supported by this physical monitor
+        */
+        surfman_monitor_mode_t              modes[0];
+    } surfman_monitor_info_t;
+
+    typedef struct
+    {
+        /*
+        ** EDID of a physical monitor
+        */
+        uint8_t        edid[128];
+    } surfman_monitor_edid_t;
+
+    typedef struct surfman_vgpu
+    {
+        /*
+        ** new_vmonitor: Add a new virtual monitor on the vgpu
+        **
+        ** info: info of the monitor that we want to add in the guest.
+        ** edid: EDID data to inject in the guest.
+        ** Return: return NULL or failure, a valid struct_vmonitor_t on success
+        **
+        ** This function will inject a new monitor hotplug event in the guest.
+        */
+        surfman_vmonitor_t  (*new_vmonitor)(struct surfman_vgpu *vgpu,
+                                            surfman_monitor_info_t *info,
+                                            surfman_monitor_edid_t *edid);
+
+        /*
+        ** free_vmonitor: Destroy a vmonitor and free all the resources associated
+        **               with it.
+        **
+        ** vmonitor: vmonitor to destroy.
+        */
+        void                (*free_vmonitor)(struct surfman_vgpu *vgpu,
+                                             surfman_vmonitor_t vmonitor);
+
+        /*
+        ** get_psurface_by_vmonitor: Return a psurface that is associated with
+        **                           this vmonitor.
+        **
+        ** vmonitor: vmonitor to get the psurface from
+        ** Return: NULL on failure, a valid psurface on success.
+        **
+        ** The display function use psurface and monitor. In order to switch
+        ** to a vm that has vgpu we need to get a psurface out of the vmonitor.
+        **
+        ** Look at the example bellow.
+        */
+        surfman_psurface_t  (*get_psurface_by_vmonitor)(struct surfman_vgpu *vgpu,
+                                                        surfman_vmonitor_t vmonitor);
+
+        /*
+        ** update_bar: The guest the updating the mapping of a bar on the vgpu
+        **             device.
+        **
+        ** bar: See the definition of surfman_update_bar_t
+        ** Return: SURFMAN_ERROR or SURFMAN_SUCCESS
+        **
+        ** In case of an error the vgpu and the guest will be destroyed.
+        */
+        int                 (*update_bar)(struct surfman_vgpu *vgpu,
+                                          surfman_update_bar_t *bar);
+
+        /*
+        ** config_write: PCI config space write
+        **
+        ** A write to the config space from the guest will cause this function
+        ** to be called.
+        */
+        void                (*config_write)(struct surfman_vgpu *vgpu,
+                                            unsigned long offset,
+                                            size_t size,
+                                            uint32_t data);
+
+        /*
+        ** config_space_read: PCI config space read
+        **
+        ** A read to the config space from the guest will cause this function
+        ** to be called.
+        */
+        uint32_t            (*config_read)(struct surfman_vgpu *vgpu,
+                                           unsigned long offset,
+                                           size_t size);
+
+        /*
+        ** notify that a change change in the vgpu
+        **
+        ** See surfman_plugin_t::plugin for the possible value.
+        */
+        int notify;
+    } surfman_vgpu_t;
+
+    typedef struct
+    {
+        unsigned int x;
+        unsigned int y;
+        unsigned int w;
+        unsigned int h;
+    } surfman_rect_t;
+
+    typedef struct
+    {
+        /*
+        ** domid: domain identifier or where the vm that has a vgpu
+        */
+        unsigned int domid;
+
+        /*
+        ** Bus Device Function of the device in the vm
+        */
+        uint8_t bus;
+        uint8_t dev;
+        uint8_t func;
+
+        /*
+        ** IO handle to get IO requests from the vgpu domain.
+        */
+        void *io_handle;
+
+        /*
+        ** VGPU type
+        */
+#define SURFMAN_VGPU_INFO_TYPE_PASSTHROUGH 0
+#define SURFMAN_VGPU_INFO_TYPE_EMULATION 1
+        int type;
+
+    } surfman_vgpu_info_t;
+
+    typedef struct
+    {
+        /*
+        ** Maximum on vgpu that can run at the same time.
+        */
+        unsigned int        max_vgpus;
+
+        /*
+        ** Name displayed in the UI under the 3d enable menu
+        */
+        char                name[30];
+
+        /*
+        ** Number of device to pass through.
+        ** Set 0 in this field if plugin doesn't need passthrough.
+        */
+        unsigned int        bdf_count;
+
+        /*
+        ** Use msi_translation for the pass-through devices
+        */
+        unsigned int        msi_translation;
+
+        /*
+        ** List of the host BDF that needs to be passed through
+        **
+        ** guest_slot is optional: Set the value to force the
+        **                         device address of the guest
+        **                         bus 0 for this device (ignored
+        **                         if equal to 0).
+        */
+        struct
+        {
+                uint16_t        bus;
+                uint8_t         dev;
+                uint8_t         func;
+                uint8_t         guest_slot;
+        }                       bdf_list[4];
+    } surfman_vgpu_mode_t;
+
+    typedef struct surfman_plugin
+    {
+        /*
+        ** init: Initialize the plugin.
+        **
+        ** plugin: Self pointer to the plugin
+        ** return: SURFMAN_SUCCESS or SURFMAN_ERROR
+        */
+        int                         (*init)(struct surfman_plugin *plugin);
+
+        /*
+        ** shutdown: Destroy the plugin
+        */
+        void                        (*shutdown)(struct surfman_plugin *plugin);
+
+        /*
+        ** display: Main switching function
+        **
+        ** config: Array of surfman_display_t, describes how to arrange
+        **         the psurfaces on the monitors.
+        ** size: Number of element in this array.
+        ** return: SURFMAN_SUCCESS or SURFMAN_ERROR
+        **
+        ** This function takes an array of pairs (psurface, monitor).
+        ** A psurface can be applied onto a physical monitor so this
+        ** list description the configuration we wish to get on the
+        ** physical monitors.
+        **
+        ** If a monitor is not specified in this list its configration
+        ** shouldn't changed
+        **
+        ** A monitor could be specified more that once.
+        **
+        ** Some effect or filters can be applied for each pair.
+        **
+        ** Example:
+        ** Let take two physical monitors 0 and 1, and 3 psurface a, b, c.
+        **
+        ** { { 0, a}, {1, b} }
+        ** would display a on the monitor 0 and b on the monitor 1.
+        */
+        int                         (*display)(struct surfman_plugin *plugin,
+                                               surfman_display_t *config,
+                                               size_t size);
+
+        /*
+        ** new_vgpu: Create a new vgpu instance
+        **
+        ** info: Information about the vgpu, check surfman_vgpu_info_t for more.
+        ** return: NULL or error, valid pointer on success.
+        **
+        ** A vgpu is a plugin representation of a gpu but in a vm.
+        */
+        surfman_vgpu_t *            (*new_vgpu)(struct surfman_plugin *plugin,
+                                                surfman_vgpu_info_t *info);
+
+        /*
+        ** free_vgpu: Free and destroy all the resourced assosiated with a vgpu
+        **
+        ** vgpu: Instance of a vgpu.
+        */
+        void                        (*free_vgpu)(struct surfman_plugin *plugin,
+                                                 surfman_vgpu_t *vgpu);
+
+        /*
+        ** get_monitors: Enumerate the physical monitors attached to the adapter
+        **
+        ** monitors: Array of monitors, needs to be filled up.
+        ** size: Maximum size of monitor
+        ** Return: Number of physical monitor, or SURFMAN_ERROR in case of an
+        **         error.
+        */
+        int                         (*get_monitors)(struct surfman_plugin *plugin,
+                                                    surfman_monitor_t *monitors,
+                                                    size_t size);
+
+        /*
+        ** set_monitor_modes: Set a monitor to a modes
+        **
+        ** monitor: Physical monitor to set the mode on
+        ** mode: Mode to set
+        ** Return: SURFMAN_SUCCESS or SURFMAN_ERROR
+        */
+        int                         (*set_monitor_modes)(struct surfman_plugin *plugin,
+                                                         surfman_monitor_t monitor,
+                                                         surfman_monitor_mode_t *mode);
+
+        /*
+        ** get_monitor_info: get information on a monitor
+        **
+        ** monitor: Pointer to the monitor we want the info from.
+        ** info: Pointer on info, needs to be filled up. cf to the definition of
+        **       surfman_monitor_info_t for more information.
+        ** Return: SURFMAN_SUCCESS or SURFMAN_ERROR
+        */
+        int                         (*get_monitor_info)(struct surfman_plugin *plugin,
+                                                        surfman_monitor_t monitor,
+                                                        surfman_monitor_info_t *info,
+                                                        unsigned int modes_count);
+        /*
+        ** get_monitor_edid: get edid of a monitor
+        **
+        ** monitor: Pointer to the monitor we want to get the edid from.
+        ** edid: EDID
+        ** Return: SURFMAN_SUCCESS or SURFMAN_ERROR
+        */
+        int                         (*get_monitor_edid)(struct surfman_plugin *plugin,
+                                                        surfman_monitor_t monitor,
+                                                        surfman_monitor_edid_t *edid);
+
+        /*
+        ** get_psurface_from_surface: Get a plugin representation of a surface
+        **
+        ** surface: surface to be based on.
+        ** Return: NULL in case of an error, valid psurface on success.
+        **
+        ** A psurface is the plugin internal representation of a surface.
+        ** This psurface is used while switching. A psurface can be applied onto a
+        ** monitor.
+        */
+        surfman_psurface_t          (*get_psurface_from_surface)(struct surfman_plugin *plugin,
+                                                                 surfman_surface_t *surface);
+
+        /*
+        ** update_psurface_from_surface
+        **
+        ** TODO: Doc
+        */
+        #define SURFMAN_UPDATE_PAGES    (1 << 0)
+        #define SURFMAN_UPDATE_FORMAT   (1 << 1)
+        #define SURFMAN_UPDATE_OFFSET   (1 << 2)
+        #define SURFMAN_UPDATE_ALL      0x7
+        void                        (*update_psurface)(struct surfman_plugin *plugin,
+                                                       surfman_psurface_t psurface,
+                                                       surfman_surface_t *surface,
+                                                       unsigned int flags);
+        /*
+        ** refresh_psurface
+        **
+        ** TODO: Doc
+        */
+        void                        (*refresh_psurface)(struct surfman_plugin *plugin,
+                                                        surfman_psurface_t psurface,
+                                                        uint8_t *refresh_bitmap);
+
+        /*
+        ** get_pages_from_psurface: get a list of pages to surfman where a surface
+        **                          could be mapped to.
+        **
+        ** pages: Allocated array that needs to be filled up, size of the array would be the
+        **        size surface mfns array assosiated with the psurface.
+        ** Return: SURFMAN_ERROR or SURFMAN_SUCCESS
+        **
+        ** This function can only be called on psurface create from
+        ** get_psurface_from_surface. If the plugin don't support the
+        ** functionnality this function should return SURFMAN_ERROR.
+        */
+        int                         (*get_pages_from_psurface)(struct surfman_plugin *plugin,
+                                                               surfman_psurface_t psurface,
+                                                               pfn_t *pages);
+
+        /*
+        ** free_psurface_pages
+        **
+        ** TODO: Doc
+        */
+
+        void                        (*free_psurface_pages)(struct surfman_plugin *plugin,
+                                                           surfman_psurface_t psurface);
+        /*
+        ** copy_surface_on_psurface: copy the content of a surface onto a psurface
+        **
+        ** psurface: destination of the copy, the source being the surface associated with it
+        ** Return: SURFMAN_ERROR or SURFMAN_SUCCESS
+        **
+        ** If the size of the psurface is smaller than the size of the surface
+        ** return SURFMAN_ERROR.
+        */
+        int                         (*copy_surface_on_psurface)(struct surfman_plugin *plugin,
+                                                                surfman_psurface_t psurface);
+
+        /*
+        ** copy_psurface_on_surface: copy the content of a psurface onto a surface
+        **
+        ** psurface: source of the copy, the destination being the surface associated with it
+        ** surface: destination of the copy
+        ** Return: SURFMAN_ERROR or SURFMAN_SUCCESS
+        **
+        ** If the size of the psurface is smaller than the size of the surface
+        ** return SURFMAN_ERROR.
+        */
+        int                         (*copy_psurface_on_surface)(struct surfman_plugin *plugin,
+                                                                surfman_psurface_t psurface);
+
+         /*
+        ** free_psurface: Destroy and free all the resource assosiated with a
+        **                psurface.
+        **
+        ** psurface: psurface to destroy
+        **
+        ** The psurface that can be destroy are the only ones that got created using
+        ** get_psurface_from_surface. free_psurface on a psurface that comes from
+        ** get_psurface_by_vmonitor should do nothing.
+        **
+        */
+        void                        (*free_psurface)(struct surfman_plugin *plugin,
+                                                     surfman_psurface_t psurface);
+
+        /*
+        ** pre_s3: Do all the necessary operations for the host prior to entering
+        **         in S3 sleep state.
+        */
+        void                        (*pre_s3)(struct surfman_plugin *plugin);
+
+        /*
+        ** post_s3: Do all the necessary operations for the host subsequent to leaving
+        **          from S3 sleep state.
+        */
+        void                        (*post_s3)(struct surfman_plugin *plugin);
+
+        /*
+        ** increase_brightness: Increase brightness
+        */
+        void                        (*increase_brightness)(struct surfman_plugin *plugin);
+
+        /*
+        ** decrease_brightness: Decrease_brightness
+        */
+        void                        (*decrease_brightness)(struct surfman_plugin *plugin);
+
+        /*
+        ** get_vgpu_mode: Return hint about plugin VGPU support and which host device
+        **                to pass through.
+        **                Return SURFMAN_ERROR if plugin doesn't support VGPU.
+        **
+        */
+        int                         (*get_vgpu_mode)(struct surfman_plugin *plugin, surfman_vgpu_mode_t *mode);
+
+        struct
+        {
+                /*
+                ** stride alignement in byte
+                */
+                unsigned int        stride_align;
+
+                /*
+                ** Bit ORing of what the plugin supports.
+                */
+# define SURFMAN_FEATURE_NONE           0
+# define SURFMAN_FEATURE_NEED_REFRESH   (1 << 1)
+# define SURFMAN_FEATURE_PAGES_MAPPED   (1 << 2)
+# define SURFMAN_FEATURE_FB_CACHING     (1 << 3)
+                int                 features;
+        }                           options;
+
+        /*
+        ** Notify a state change in the plugin
+        **
+        ** The value is read and cleared from surfman. Set for the plugin.
+        */
+# define SURFMAN_NOTIFY_NONE             0
+# define SURFMAN_NOTIFY_MONITOR_RESCAN   (1 << 1)
+        int                         notify;
+
+        /*
+         * restore_brightness : restore brightness
+         * TODO: doc
+         */
+        void                        (*restore_brightness)(struct surfman_plugin *plugin);
+
+    } surfman_plugin_t;

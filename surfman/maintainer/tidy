@@ -1,0 +1,35 @@
+#!/bin/sh
+#
+# Copyright (c) 2010 Citrix Systems, Inc.
+# 
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+# 
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+# 
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+#
+if [ -f Makefile ]; then
+	make distclean
+fi
+
+for i in acconfig.h AUTHORS bstrap ChangeLog configure.in COPYING INSTALL mdist NEWS README tidy src/config.h.in `find . -name Makefile.am -print` `find . -name \*.[ch] -print` ; do
+	if [ -f $i ]; then
+		gimme $i
+	fi
+done
+
+find . -name \*.[ch] -print | xargs indent -i2 -ts0 
+
+find . -name \*~ -print| xargs /bin/rm -f 
+find . -name \*.BAK -print| xargs /bin/rm -f
+find . -name a.out -print| xargs /bin/rm -f
+find . -name core -print| xargs /bin/rm -f
+

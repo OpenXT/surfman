@@ -1,0 +1,19 @@
+#ifndef VERSION_H_
+# define VERSION_H_
+
+/* Surfman can support plugin with API version from minimum to maximum (included) */
+# define PLUGIN_MINIMUM_VERSION SURFMAN_VERSION(2, 0, 0)
+# define PLUGIN_CURRENT_VERSION SURFMAN_VERSION(@SURFMAN_MAJOR_VERSION@, @SURFMAN_MINOR_VERSION@, @SURFMAN_MICRO_VERSION@)
+
+# if PLUGIN_MINIMUM_VERSION > PLUGIN_CURRENT_VERSION
+#  error "Minimum version must smaller than maximum version."
+# endif
+
+# define PLUGIN_VERSION_SUPPORTED(version)                                      \
+    ((PLUGIN_MINIMUM_VERSION <= version) || (version <= PLUGIN_CURRENT_VERSION))
+
+# if PLUGIN_CURRENT_VERSION != SURFMAN_API_VERSION
+#  error "Surfman implements a different version of the API."
+# endif
+
+#endif /* VERSION_H_ */

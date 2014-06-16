@@ -1,6 +1,6 @@
 /*  
  * Copyright (c) 2012, Citrix Systems
- * All rights reserved.
+ *
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,7 +30,7 @@
 /*
  * Citrix XenClient Surface Manager plugin API
  *
- * Copyright Citrix Systems, Inc. All rights reserved.
+ * Copyright Citrix Systems, Inc.
  * 
  * Julian Pidancet <julian.pidancet@citrix.com>
  * Jean Guyader <jean.guyader@citrix.com>

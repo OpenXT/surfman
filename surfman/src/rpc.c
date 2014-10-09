@@ -88,18 +88,6 @@ rpc_disconnect (dmbus_client_t client, void *priv)
   struct domain *d;
 
   surfman_info ("DM disconnected. domid %d", dev->d->domid);
-  for (;;) {
-    unsigned int num;
-    char **x = xenstore_ls(&num, "/local/domain/%d", dev->d->domid);
-    if (!x) {
-      surfman_info ("Domain gone %d, proceeding", dev->d->domid);
-      break;
-    }
-    free(x);
-    usleep(1000 * 100);
-  }
-  surfman_info ("DM disconnected - detected domain gone, proceeding");
-
   event_del (&dev->ev);
 
   if (dev->ops && dev->ops->takedown)

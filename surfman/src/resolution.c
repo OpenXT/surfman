@@ -20,6 +20,9 @@
 static const char *current_display_size_path = "/xc_tools/switcher/current_display_size";
 static const char *display_size_path = "switcher/display_size";
 
+static const unsigned int width_for_bad_edid = 1024;
+static const unsigned int height_for_bad_edid = 768;
+
 static void
 set_current_display_size(unsigned int x, unsigned int y)
 {
@@ -88,7 +91,8 @@ static void resolution_xs_read(unsigned int domid, unsigned int *w, unsigned int
     }
 }
 
-void resolution_domain_on_monitor(unsigned int domid, struct plugin *plugin, surfman_monitor_t monitor)
+void 
+resolution_domain_on_monitor(unsigned int domid, struct plugin *plugin, surfman_monitor_t monitor)
 {
     unsigned int w = 0, h = 0;
     unsigned int xs_w = 0, xs_h = 0;
@@ -106,6 +110,52 @@ void resolution_domain_on_monitor(unsigned int domid, struct plugin *plugin, sur
     }
 }
 
+/**
+ * Finds the largest resolution supported by all monitors. 
+ * 
+ * TODO: It might be more ideal to use the supported mode information for each monitor, rather
+ *  than just using the montior's native resolutions. Unfortunately, the plugin architecutre
+ *  currently only gives us the maximum resolution, so we'll deal with that.
+ */
+void 
+__find_greatest_common_resolution(struct plugin * plugin, unsigned int * width_out, unsigned int * height_out)
+{
+    int i, rc;
+
+    //To start off, assume the largest possible width and height.
+    //These will quickly be overridden by the monitors we pass through.
+    unsigned int least_width = -1, least_height = -1;
+
+    for(i = 0; i < plugin->monitor_count; ++ i) {
+
+        unsigned int monitor_width, monitor_height;
+        rc = get_resolution_from_monitor(plugin, plugin->monitors[i], &monitor_width, &monitor_height);
+
+        //If we've failed to get a resolution, fall back to the default
+        //used for monitors without EDIDs. TODO: possibly skip bad EDIDs instead?
+        if(!rc) {
+            monitor_width = width_for_bad_edid;
+            monitor_height = height_for_bad_edid;
+        }
+        
+        //Naive initial method: use the lesser of the width and height.
+        //This can create some very odd modes, but it should work with 
+        //the method of mode creation we use in the plugins.
+        if(monitor_width < least_width) {
+            least_width = monitor_width;
+        }
+
+        if(monitor_height < least_height) {
+            least_height = monitor_height;
+        }
+    }
+
+    //Finally, output the width and height.
+    *width_out = least_width;
+    *height_out = least_height;
+}
+
+
 void
 resolution_refresh_current(struct plugin *plugin)
 {
@@ -114,8 +164,10 @@ resolution_refresh_current(struct plugin *plugin)
 
     if (plugin->monitor_count > 0)
     {
-        if (!get_resolution_from_monitor(plugin, plugin->monitors[0], &w, &h))
-            return;
+        //Find a resolution that should work for all monitors...
+        __find_greatest_common_resolution(plugin, &w, &h); 
+
+        //... and present a display of that size to the domain.
         set_current_display_size(w, h);
     }
 }

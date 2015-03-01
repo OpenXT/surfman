@@ -46,7 +46,7 @@ static uint32_t find_drm_property_by_name(int fd, drmModeConnector *connector, c
         }
 
         //If it's not an enumerated property, skip it, as it's not the property
-        //we're looking for. TODO: Remove?
+        //we're looking for.
         if (!(property->flags & DRM_MODE_PROP_ENUM)) {
             continue;
         }
@@ -466,7 +466,7 @@ modeset:
             goto fail_setplane;
         }
     } else {
-        //Set our mode to scaling. TODO: Make this an option?
+        //Set up the scaling mode, which was previously read from surfman.conf.
         rc = drm_connector_set_scaling(monitor->device->fd, con, configured_scaling_mode);
         if(rc < 0) {
             DRM_INF("Error setting up scaling: %s.", strerror(-rc));

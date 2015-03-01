@@ -113,7 +113,7 @@ resolution_domain_on_monitor(unsigned int domid, struct plugin *plugin, surfman_
 /**
  * Finds the largest resolution supported by all monitors. 
  * 
- * TODO: It might be more ideal to use the supported mode information for each monitor, rather
+ * NOTE: It might be more ideal to use the supported mode information for each monitor, rather
  *  than just using the montior's native resolutions. Unfortunately, the plugin architecutre
  *  currently only gives us the maximum resolution, so we'll deal with that.
  */

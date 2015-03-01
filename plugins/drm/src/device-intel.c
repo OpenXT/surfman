@@ -338,13 +338,18 @@ static int drm_connector_set_scaling(int fd, drmModeConnector *connector, int sc
  * @param monitor The monitor on which the framebuffer is to be displayed.
  * @param drm_framebuffer The framebuffer to be displayed.
  *
- * @return The newly-create mode pointer. This should be free'd with free() when 
- *      it is no longer needed.
+ * @return The newly-create mode pointer, or NULL if allocation fails.
+ *    This should be freed with free() when it is no longer needed.
  */
 static drmModeModeInfoPtr __create_mode_for_framebuffer(struct drm_monitor * monitor, struct drm_framebuffer * drmfb) {
 
     //Allocate a new ModeInfo object...
     drmModeModeInfoPtr mode = malloc(sizeof(drmModeModeInfo));
+
+    // If we weren't able to allocate a block of memory for the mode, fail.
+    if(!mode) {
+      return NULL;
+    }
 
     //... fill it with the monitor's preferred mode...
     memcpy(mode, &monitor->prefered_mode, sizeof(drmModeModeInfo));
@@ -386,13 +391,21 @@ static int i915_modeset(struct drm_monitor *monitor, struct drm_framebuffer *drm
 
             DRM_INF("It seems like we have a panel fitter...");
 
-            //Adopt the monitor's preferred mode...
+            //Adopt the monitor's preferred mode.
             mode = synthetic_mode = __create_mode_for_framebuffer(monitor, drmfb); 
-            
+
+            //If we weren't able to allocate a synthetic mode, we have a very poor chance of recovering;
+            //we'll bail out as best we can.
+            if(!synthetic_mode) {
+               DRM_INF("... but we failed to allocate space for a new panel-fitting mode! Bailing out.");
+               goto fail_setcrtc;
+            }
+
             DRM_INF("... using mode (%dx%d) to display a (%d x %d) framebuffer via the panel fitter.", 
                     mode->hdisplay, mode->vdisplay, drmfb->fb.width, drmfb->fb.height);
            
-            //... but use the DRM framebuffer as-is.
+            //Use the DRM franmebuffer as is-- it should match our panel-fitting "synthetic"
+            //mode.
             monitor->framebuffer = drmfb;
 
             goto modeset;
@@ -475,7 +488,7 @@ modeset:
 
     drm_device_drop_master(monitor->device);
     
-    //If we create a new mode, destroy the object that holds it.
+    //If we've created a new mode, destroy the object that holds it.
     if(synthetic_mode) {
         free(synthetic_mode);
     }

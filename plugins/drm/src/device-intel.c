@@ -18,6 +18,58 @@
 
 #include "project.h"
 
+static const char * SCALING_MODE_PROPERTY = "scaling mode";
+
+// The user-selected scaling mode. Used when a panel fitter is present.
+extern int configured_scaling_mode;
+
+/**
+ * Finds the ID numebr for a given DRM connector property.
+ *
+ * @param fd The FD used to connect to DRM.
+ * @param connector The connector whose property is to be identified.
+ * @param property_name The string version of the property to be located.
+ */
+static uint32_t find_drm_property_by_name(int fd, drmModeConnector *connector, const char * property_name)
+{
+    drmModePropertyPtr property;
+    uint32_t property_id;
+    int i;
+
+    //Iterate over each of the properties, looking for one with the correct name.
+    for (i = 0; i < connector->count_props; i++) {
+        property = drmModeGetProperty(fd, connector->props[i]);
+
+        //If this property doesn't seem to be valid, skip it.
+        if (!property) {
+            continue;
+        }
+
+        //If it's not an enumerated property, skip it, as it's not the property
+        //we're looking for.
+        if (!(property->flags & DRM_MODE_PROP_ENUM)) {
+            continue;
+        }
+
+        //If we've found our property, return its ID.
+        if (strcmp(property->name, property_name) == 0) {
+            property_id = property->prop_id;
+            drmModeFreeProperty(property);
+            return property_id;
+        }
+        drmModeFreeProperty(property);
+    }
+    return 0;
+}
+
+/**
+ * Returns true iff the given display supports panel fitting.
+ */
+static int supports_panel_fitting(int fd, drmModeConnector *connector) {
+    return find_drm_property_by_name(fd, connector, SCALING_MODE_PROPERTY) > 0;
+}
+
+
 /* Constraints on modesetting with libDRM:
  * - We are only able to scale up if
  *   + Using plane,
@@ -264,6 +316,54 @@ static int i915_framebuffer_release(struct drm_framebuffer *framebuffer)
 }
 
 /*
+ * Helper function to enable or disable the scaling (panel fitting) for a given connector.
+ */
+static int drm_connector_set_scaling(int fd, drmModeConnector *connector, int scaling_mode)
+{
+    uint32_t property_id = find_drm_property_by_name(fd, connector, SCALING_MODE_PROPERTY);
+
+    //If the device doesn't have the the given property, fail.
+    if (!property_id) {
+        return -ENOENT;
+    }
+
+    //If we fail to set the property, return the relevant error code.
+    return -drmModeConnectorSetProperty(fd, connector->connector_id, property_id, scaling_mode);
+}
+
+/**
+ * Creates a new ModeInfo structure designed for display of the provided framebuffer
+ * on the given monitor.
+ *
+ * @param monitor The monitor on which the framebuffer is to be displayed.
+ * @param drm_framebuffer The framebuffer to be displayed.
+ *
+ * @return The newly-create mode pointer, or NULL if allocation fails.
+ *    This should be freed with free() when it is no longer needed.
+ */
+static drmModeModeInfoPtr __create_mode_for_framebuffer(struct drm_monitor * monitor, struct drm_framebuffer * drmfb) {
+
+    //Allocate a new ModeInfo object...
+    drmModeModeInfoPtr mode = malloc(sizeof(drmModeModeInfo));
+
+    // If we weren't able to allocate a block of memory for the mode, fail.
+    if(!mode) {
+      return NULL;
+    }
+
+    //... fill it with the monitor's preferred mode...
+    memcpy(mode, &monitor->prefered_mode, sizeof(drmModeModeInfo));
+
+    //... and override the width and height to match those of the target fb.
+    mode->hdisplay = drmfb->fb.width;
+    mode->vdisplay = drmfb->fb.height;
+
+    //... and return our newly-created mode.
+    return mode;    
+}
+
+
+/*
  * Device interface.
  */
 static int i915_modeset(struct drm_monitor *monitor, struct drm_framebuffer *drmfb)
@@ -271,6 +371,7 @@ static int i915_modeset(struct drm_monitor *monitor, struct drm_framebuffer *drm
     int rc = 0;
     drmModeConnector *con;
     drmModeModeInfoPtr mode, fallback_mode;
+    drmModeModeInfoPtr synthetic_mode = NULL;
     unsigned int crtc_x = 0, crtc_y = 0;
 
     con = drmModeGetConnector(monitor->device->fd, monitor->connector);
@@ -282,10 +383,43 @@ static int i915_modeset(struct drm_monitor *monitor, struct drm_framebuffer *drm
     }
     mode = __find_mode(&drmfb->fb, con->modes, con->count_modes, &fallback_mode);
     if (!mode) {
+
+        //If the monitor doesn't directly support the relevant mode, but
+        //is connected via a connection that supports panel fitting, we can 
+        //use that to scale to the monitor's preferred mdoe.
+        if(supports_panel_fitting(monitor->device->fd, con)) {
+
+            DRM_INF("It seems like we have a panel fitter...");
+
+            //Adopt the monitor's preferred mode.
+            mode = synthetic_mode = __create_mode_for_framebuffer(monitor, drmfb); 
+
+            //If we weren't able to allocate a synthetic mode, we have a very poor chance of recovering;
+            //we'll bail out as best we can.
+            if(!synthetic_mode) {
+               DRM_INF("... but we failed to allocate space for a new panel-fitting mode! Bailing out.");
+               goto fail_setcrtc;
+            }
+
+            DRM_INF("... using mode (%dx%d) to display a (%d x %d) framebuffer via the panel fitter.", 
+                    mode->hdisplay, mode->vdisplay, drmfb->fb.width, drmfb->fb.height);
+           
+            //Use the DRM franmebuffer as is-- it should match our panel-fitting "synthetic"
+            //mode.
+            monitor->framebuffer = drmfb;
+
+            goto modeset;
+
+        } else {
+            DRM_INF("No panel fitter on this connector; rendering atop a plane.");
+        }
+
+
         /* The monitor does not handle this mode, but if the framebuffer is smaller we can stick it in a
          * plane on top of a blanked framebuffer.
          * Lets try to use a blanked framebuffer as small as possible. */
         if (fallback_mode) {
+
             monitor->plane = i915_plane_new(drmfb, monitor->crtc);
             if (monitor->plane) {
                 /* XXX: I couldn't setup a plane without an underlying (useless) framebuffer.
@@ -320,11 +454,14 @@ static int i915_modeset(struct drm_monitor *monitor, struct drm_framebuffer *drm
 
 modeset:
     rc = drm_device_set_master(monitor->device);
+
+
     if (rc) {
         DRM_ERR("Cannot perform modeset operation while something else is mastering `%s' (%s).",
                 monitor->device->devnode, strerror(-rc));
         goto fail_setmaster;
     }
+
     if (drmModeSetCrtc(monitor->device->fd, monitor->crtc, monitor->framebuffer->id,
                        crtc_x, crtc_y,
                        &(monitor->connector), 1, mode)) {
@@ -341,8 +478,21 @@ modeset:
                     monitor->plane->id, monitor->connector, strerror(-rc));
             goto fail_setplane;
         }
+    } else {
+        //Set up the scaling mode, which was previously read from surfman.conf.
+        rc = drm_connector_set_scaling(monitor->device->fd, con, configured_scaling_mode);
+        if(rc < 0) {
+            DRM_INF("Error setting up scaling: %s.", strerror(-rc));
+        }
     }
+
     drm_device_drop_master(monitor->device);
+    
+    //If we've created a new mode, destroy the object that holds it.
+    if(synthetic_mode) {
+        free(synthetic_mode);
+    }
+
     return 0;
 
 fail_setplane:
@@ -353,6 +503,11 @@ fail_setcrtc:
     drm_device_drop_master(monitor->device);
 fail_setmaster:
     drmModeFreeConnector(con);
+
+    if(synthetic_mode) {
+        free(synthetic_mode);
+    }
+
     return rc;
 }
 

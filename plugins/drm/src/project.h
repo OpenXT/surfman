@@ -19,6 +19,9 @@
 #ifndef __PROJECT_H__
 # define __PROJECT_H__
 
+#define PLUGIN_NAME "drm-plugin"
+#define CONFIG_SCALING_MODE "scaling_mode"
+
 # include "config.h"
 
 # ifdef TM_IN_SYS_TIME

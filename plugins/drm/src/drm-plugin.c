@@ -29,6 +29,68 @@ struct udev *udev;
 /* Backlight object (should be device dependent, but we don't have that freedom). */
 struct backlight *backlight;
 
+
+/**
+ * Define a set of acceptable scaling modes.
+ */
+enum scaling_modes {
+    SCALING_MODE_FULLSCREEN = 0,
+    SCALING_MODE_ASPECT,
+    SCALING_MODE_FULL,    
+    SCALING_MODE_NONE,   
+    SCALING_MODE_COUNT
+};
+
+static const int scaling_modes_drm [SCALING_MODE_COUNT] = {
+    [SCALING_MODE_FULLSCREEN] = DRM_MODE_SCALE_FULLSCREEN,
+    [SCALING_MODE_ASPECT    ] = DRM_MODE_SCALE_ASPECT,
+    [SCALING_MODE_FULL      ] = DRM_MODE_SCALE_CENTER,
+    [SCALING_MODE_NONE      ] = DRM_MODE_SCALE_NONE
+
+};
+
+static const char * scaling_modes_config [SCALING_MODE_COUNT] = {
+    [SCALING_MODE_FULLSCREEN] = "fullscreen",
+    [SCALING_MODE_ASPECT    ] = "aspect",
+    [SCALING_MODE_FULL      ] = "full",
+    [SCALING_MODE_NONE      ] = "none"
+};
+
+/* Stores the scaling mode read from the configuration. Used when possible. */
+int configured_scaling_mode = DRM_MODE_SCALE_FULLSCREEN;
+
+/**
+ * Attempts to read the default scaling mode from surfman.conf,
+ * and populates configured_scaling_mode.
+ */  
+static void __read_configuration_scaling_mode() {
+
+    int i;
+
+    //Read the scaling mode provided in the configuration.
+    const char * scaling_configuration = config_get(PLUGIN_NAME, CONFIG_SCALING_MODE);
+  
+    //If the user hasn't adjusted the configuration, use the default.
+    if(!scaling_configuration) {
+        return;
+    }
+
+    //Iterate over all scaling modes, and check to see if it's 
+    //included in our configuration file.
+    for(i = 0; i < SCALING_MODE_COUNT; ++i) {
+
+        const char * scaling_mode = scaling_modes_config[i];
+
+        //If we have a match, use it to set the scaling mode!
+        if(strstr(scaling_configuration, scaling_mode)) {
+            configured_scaling_mode = scaling_modes_drm[i]; 
+            return;
+        }
+    }
+
+}
+
+
 INTERNAL int drmp_init(surfman_plugin_t *plugin)
 {
     (void) plugin;
@@ -53,6 +115,8 @@ INTERNAL int drmp_init(surfman_plugin_t *plugin)
     if (!backlight) {
         DRM_WRN("Could not manage backlight in Surfman.");
     }
+
+    __read_configuration_scaling_mode();
 
     return SURFMAN_SUCCESS;
 }

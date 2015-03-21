@@ -103,15 +103,6 @@ extern _Bool xenstore_dom_watch(unsigned int domid, xenstore_watch_cb_t cb, void
 extern char *xenstore_get_domain_path(unsigned int domid);
 extern int xenstore_init(void);
 extern void xenstore_release(void);
-/* vgpu.c */
-extern void vgpu_update_plugin_vmonitors(struct plugin *p);
-extern void vgpu_update_vmonitors(struct vgpu *vgpu);
-extern int vgpu_display_allow_commit(struct plugin *p, surfman_display_t *disp, int len);
-extern void vgpu_blanker_init(struct vgpu *vgpu);
-extern void vgpu_poll_notifications(void);
-extern surfman_psurface_t vgpu_get_psurface(struct device *dev, surfman_vmonitor_t vmon);
-extern void vgpu_detach(struct vgpu *vgpu);
-extern struct device *vgpu_device_create(struct domain *d, struct dmbus_rpc_ops **ops);
 /* plugin.c */
 extern struct plugin *load_plugin(char *path);
 extern void plugin_init(const char *plugin_path, int safe_graphics);
@@ -126,8 +117,6 @@ extern void plugin_decrease_brightness(void);
 extern void plugin_restore_brightness(void);
 extern unsigned int plugin_stride_align(void);
 extern int plugin_need_refresh(struct plugin *p);
-extern struct plugin *plugin_find_vgpu(surfman_vgpu_info_t *info, surfman_vgpu_t **pvgpu);
-extern int plugin_get_vgpu_modes(struct vgpu_mode *modes, int len);
 extern int plugin_display_commit(int force);
 /* resolution.c */
 extern void resolution_domain_on_monitor(unsigned int domid, struct plugin *plugin, surfman_monitor_t monitor);
@@ -149,16 +138,12 @@ extern int get_monitor_slot(surfman_monitor_t m);
 extern void display_update_monitors(struct plugin *p, surfman_monitor_t *monitors, int count);
 extern int display_prepare_blank(int monitor_id, struct device *dev);
 extern int display_prepare_surface(int monitor_id, struct device *dev, struct surface *s, struct effect *e);
-extern int display_prepare_vmonitor(int monitor_id, struct device *dev, surfman_vmonitor_t vmon, struct effect *e);
 extern int display_commit(struct plugin *p, int force);
-extern void display_vmonitor_takedown(surfman_vmonitor_t vmon);
 extern void display_surface_takedown(struct surface *s);
 extern void display_plugin_takedown(struct plugin *p);
 extern int display_get_edid(int monitor_id, uint8_t *buff, size_t sz);
 /* rpc.c */
 extern int rpc_init(void);
-/* xengfx.c */
-extern struct device *xengfx_device_create(struct domain *d, struct dmbus_rpc_ops **ops);
 /* splashscreen.c */
 extern struct splashfont_8x8 simplefont;
 extern int get_splash_dims(uint32_t *linesize, uint32_t *screenwidth, uint32_t *screenheight, uint32_t *screensize, unsigned int *Bpp, unsigned int *format);

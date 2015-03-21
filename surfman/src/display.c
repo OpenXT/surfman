@@ -148,10 +148,6 @@ get_psurface (struct plugin *p, struct display *d)
     {
       return surface_get_psurface (d->u.surface, p);
     }
-  else if (d->display_type == DISPLAY_TYPE_VMONITOR)
-    {
-      return vgpu_get_psurface(d->dev, d->u.vmonitor);
-    }
 
   /* DISPLAY_TYPE_BLANK */
   return NULL;
@@ -382,33 +378,6 @@ display_prepare_surface (int monitor_id,
   return 0;
 }
 
-int
-display_prepare_vmonitor (int monitor_id,
-                          struct device *dev,
-                          surfman_vmonitor_t vmon,
-                          struct effect *e)
-{
-  struct display *d;
-
-  if (!display[monitor_id].mon)
-    {
-      surfman_warning ("Attempting to bind vmonitor to a disabled monitor");
-      return -1;
-    }
-
-  d = calloc (1, sizeof (*d));
-  if (!d)
-    return -1;
-
-  d->display_type = DISPLAY_TYPE_VMONITOR;
-  if (e)
-    d->effect = *e;
-  d->dev = dev;
-  d->u.vmonitor = vmon;
-  LIST_INSERT_HEAD (&display[monitor_id].next, d, link);
-
-  return 0;
-}
 
 int
 display_commit (struct plugin *p, int force)
@@ -416,7 +385,6 @@ display_commit (struct plugin *p, int force)
   int i;
   struct display_list dlist;
   int rc;
-  int display_vmonitor = 0;
 
   rc = display_list_init (&dlist);
   if (rc)
@@ -449,8 +417,6 @@ display_commit (struct plugin *p, int force)
                   LIST_REMOVE (d, link);
                   ps = get_psurface (p, d);
                   prepare_display (p, d, i);
-                  if (d->display_type == DISPLAY_TYPE_VMONITOR)
-                    display_vmonitor = 1;
                   rc |= display_list_append (&dlist, display[i].mon, ps, &d->effect);
                   LIST_INSERT_HEAD (&display[i].current, d, link);
                 }
@@ -461,40 +427,13 @@ display_commit (struct plugin *p, int force)
   if (rc)
     surfman_error ("Memory allocation failures in display list");
 
-  /* Check if we are allowed to commit only a vmonitor isn't displayed */
-  if (!display_vmonitor)
-    rc = vgpu_display_allow_commit (p, dlist.disp, dlist.len);
-
+  rc = display_list_commit (p, &dlist, force);
   if (rc)
-    surfman_error ("Surfman denied commit for plugin %s", p->name);
-  else
-    {
-      rc = display_list_commit (p, &dlist, force);
-      if (rc)
-        surfman_error ("Plugin %s display() method failed", p->name);
-    }
+    surfman_error ("Plugin %s display() method failed", p->name);
 
   display_list_cleanup (&dlist);
 
   return rc;
-}
-
-void
-display_vmonitor_takedown (surfman_vmonitor_t vmon)
-{
-  int i;
-
-  for (i = 0; i < DISPLAY_MONITOR_MAX; i++)
-    {
-      struct display *d, *tmp;
-
-      LIST_FOREACH_SAFE (d, tmp, &display[i].current, link)
-        {
-          if (d->display_type == DISPLAY_TYPE_VMONITOR &&
-              d->u.vmonitor == vmon)
-            evict_display (NULL, d, i);
-        }
-    }
 }
 
 void

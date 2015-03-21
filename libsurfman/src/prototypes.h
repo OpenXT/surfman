@@ -15,24 +15,6 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
-/* mapcache.c */
-extern mapcache_t mapcache_create(int domid);
-extern void mapcache_destroy(mapcache_t mapcache);
-extern int mapcache_has_addr(mapcache_t mapcache, void *addr);
-extern int mapcache_invalidate_all(mapcache_t mapcache);
-extern int mapcache_invalidate_entry(mapcache_t mapcache, uint64_t addr);
-extern void *mapcache_get_mapping(mapcache_t mapcache, uint64_t addr);
-extern void mapcache_dump_stats(mapcache_t mapcache);
-extern int copy_to_domain(mapcache_t mapcache, uint64_t addr, void *p, size_t sz);
-extern int copy_from_domain(mapcache_t mapcache, void *p, uint64_t addr, size_t sz);
-/* io.c */
-extern int iohandle_get_fd(iohandle_t iohdl);
-extern int io_handle(iohandle_t iohdl);
-extern void iohandle_iorange_setpriv(iohandle_t iohdl, uint64_t addr, void *priv);
-extern void iohandle_remove_iorange(iohandle_t iohdl, uint64_t addr, int mmio);
-extern void iohandle_add_iorange(iohandle_t iohdl, uint64_t addr, uint64_t size, int mmio, io_ops_t *ops, void *priv);
-extern iohandle_t iohandle_create(int domid);
-extern void iohandle_destroy(iohandle_t iohdl);
 /* util.c */
 extern void message(int flags, const char *file, const char *function, int line, const char *fmt, ...);
 extern void *xcalloc(size_t n, size_t s);

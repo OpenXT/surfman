@@ -202,62 +202,7 @@ dbus_set_visible (DBusMessage *msg, DBusMessage *reply)
 dbus_bool_t
 dbus_vgpu_mode (DBusMessage *msg, DBusMessage *reply)
 {
-  DBusError err;
-  dbus_bool_t ret = FALSE;
-  struct vgpu_mode modes[4];
-  int len;
-  unsigned int i;
-
-  uint32_t max_vgpus = 0;
-  char *name = "";
-  dbus_bool_t msi_translation = FALSE;
-  char **bdfs = NULL; uint32_t bdf_count = 0;
-
-  /* XXX FIX interface to return multiple vgpus */
-  surfman_info ("vgpu_mode()");
-
-  len = plugin_get_vgpu_modes(modes, 4);
-  if (len)
-    {
-      bdf_count = modes[0].m.bdf_count;
-      bdfs = calloc(bdf_count + 1, sizeof (char *));
-
-      for (i = 0; i < bdf_count; i++)
-        {
-          bdfs[i] = malloc (30);
-
-          if (modes[0].m.bdf_list[i].guest_slot)
-            snprintf (bdfs[i], 30, "0000:%02x:%02x.%01x@%01x",
-                                   modes[0].m.bdf_list[i].bus,
-                                   modes[0].m.bdf_list[i].dev,
-                                   modes[0].m.bdf_list[i].func,
-                                   modes[0].m.bdf_list[i].guest_slot);
-          else
-            snprintf (bdfs[i], 30, "0000:%02x:%02x.%01x",
-                                   modes[0].m.bdf_list[i].bus,
-                                   modes[0].m.bdf_list[i].dev,
-                                   modes[0].m.bdf_list[i].func);
-        }
-
-      max_vgpus = modes[0].m.max_vgpus;
-      name = modes[0].m.name;
-      msi_translation = modes[0].m.msi_translation;
-
-      ret = TRUE;
-    }
-
-
-  if (reply && ret)
-    {
-      dbus_message_append_args (reply,
-                                DBUS_TYPE_INT32, &max_vgpus,
-                                DBUS_TYPE_STRING, &name,
-                                DBUS_TYPE_BOOLEAN, &msi_translation,
-                                DBUS_TYPE_ARRAY, DBUS_TYPE_STRING, &bdfs, bdf_count,
-                                DBUS_TYPE_INVALID);
-    }
-
-  return ret;
+  return FALSE;
 }
 
 dbus_bool_t

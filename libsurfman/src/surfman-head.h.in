@@ -118,33 +118,6 @@ extern "C"
     typedef unsigned long pfn_t;
 
     /*
-    ** Mapcache: Gives access to a guest physical address space.
-    */
-    struct mapcache;
-    typedef struct mapcache *mapcache_t;
-
-    /*
-    ** Guest I/O Handling.
-    */
-# define SURFMAN_IOHANDLE_MMIO 1
-# define SURFMAN_IOHANDLE_IOPORT 0
-    struct iohandle;
-    typedef struct iohandle *iohandle_t;
-
-    typedef uint32_t (*io_read_t)(uint64_t addr, void *priv);
-    typedef void (*io_write_t)(uint64_t addr, uint32_t data, void *priv);
-
-    typedef struct
-    {
-        io_read_t readb;
-        io_read_t readw;
-        io_read_t readl;
-        io_write_t writeb;
-        io_write_t writew;
-        io_write_t writel;
-    } io_ops_t;
-
-    /*
     ** Return values
     **
     ** In case of a success, return SURFMAN_SUCCESS
@@ -173,13 +146,6 @@ extern "C"
     **
     */
     typedef void * surfman_psurface_t;
-
-    /*
-    ** surfman_vmonitor_t: Internal plugin representation of a monitor in the
-    **                     guest.
-    **
-    */
-    typedef void * surfman_vmonitor_t;
 
     /*
     ** Pair of monitor and psurface used to describe the content of a physical monitor
@@ -394,86 +360,6 @@ extern "C"
         uint8_t        edid[128];
     } surfman_monitor_edid_t;
 
-    typedef struct surfman_vgpu
-    {
-        /*
-        ** new_vmonitor: Add a new virtual monitor on the vgpu
-        **
-        ** info: info of the monitor that we want to add in the guest.
-        ** edid: EDID data to inject in the guest.
-        ** Return: return NULL or failure, a valid struct_vmonitor_t on success
-        **
-        ** This function will inject a new monitor hotplug event in the guest.
-        */
-        surfman_vmonitor_t  (*new_vmonitor)(struct surfman_vgpu *vgpu,
-                                            surfman_monitor_info_t *info,
-                                            surfman_monitor_edid_t *edid);
-
-        /*
-        ** free_vmonitor: Destroy a vmonitor and free all the resources associated
-        **               with it.
-        **
-        ** vmonitor: vmonitor to destroy.
-        */
-        void                (*free_vmonitor)(struct surfman_vgpu *vgpu,
-                                             surfman_vmonitor_t vmonitor);
-
-        /*
-        ** get_psurface_by_vmonitor: Return a psurface that is associated with
-        **                           this vmonitor.
-        **
-        ** vmonitor: vmonitor to get the psurface from
-        ** Return: NULL on failure, a valid psurface on success.
-        **
-        ** The display function use psurface and monitor. In order to switch
-        ** to a vm that has vgpu we need to get a psurface out of the vmonitor.
-        **
-        ** Look at the example bellow.
-        */
-        surfman_psurface_t  (*get_psurface_by_vmonitor)(struct surfman_vgpu *vgpu,
-                                                        surfman_vmonitor_t vmonitor);
-
-        /*
-        ** update_bar: The guest the updating the mapping of a bar on the vgpu
-        **             device.
-        **
-        ** bar: See the definition of surfman_update_bar_t
-        ** Return: SURFMAN_ERROR or SURFMAN_SUCCESS
-        **
-        ** In case of an error the vgpu and the guest will be destroyed.
-        */
-        int                 (*update_bar)(struct surfman_vgpu *vgpu,
-                                          surfman_update_bar_t *bar);
-
-        /*
-        ** config_write: PCI config space write
-        **
-        ** A write to the config space from the guest will cause this function
-        ** to be called.
-        */
-        void                (*config_write)(struct surfman_vgpu *vgpu,
-                                            unsigned long offset,
-                                            size_t size,
-                                            uint32_t data);
-
-        /*
-        ** config_space_read: PCI config space read
-        **
-        ** A read to the config space from the guest will cause this function
-        ** to be called.
-        */
-        uint32_t            (*config_read)(struct surfman_vgpu *vgpu,
-                                           unsigned long offset,
-                                           size_t size);
-
-        /*
-        ** notify that a change change in the vgpu
-        **
-        ** See surfman_plugin_t::plugin for the possible value.
-        */
-        int notify;
-    } surfman_vgpu_t;
-
     typedef struct
     {
         unsigned int x;
@@ -481,74 +367,6 @@ extern "C"
         unsigned int w;
         unsigned int h;
     } surfman_rect_t;
-
-    typedef struct
-    {
-        /*
-        ** domid: domain identifier or where the vm that has a vgpu
-        */
-        unsigned int domid;
-
-        /*
-        ** Bus Device Function of the device in the vm
-        */
-        uint8_t bus;
-        uint8_t dev;
-        uint8_t func;
-
-        /*
-        ** IO handle to get IO requests from the vgpu domain.
-        */
-        void *io_handle;
-
-        /*
-        ** VGPU type
-        */
-#define SURFMAN_VGPU_INFO_TYPE_PASSTHROUGH 0
-#define SURFMAN_VGPU_INFO_TYPE_EMULATION 1
-        int type;
-
-    } surfman_vgpu_info_t;
-
-    typedef struct
-    {
-        /*
-        ** Maximum on vgpu that can run at the same time.
-        */
-        unsigned int        max_vgpus;
-
-        /*
-        ** Name displayed in the UI under the 3d enable menu
-        */
-        char                name[30];
-
-        /*
-        ** Number of device to pass through.
-        ** Set 0 in this field if plugin doesn't need passthrough.
-        */
-        unsigned int        bdf_count;
-
-        /*
-        ** Use msi_translation for the pass-through devices
-        */
-        unsigned int        msi_translation;
-
-        /*
-        ** List of the host BDF that needs to be passed through
-        **
-        ** guest_slot is optional: Set the value to force the
-        **                         device address of the guest
-        **                         bus 0 for this device (ignored
-        **                         if equal to 0).
-        */
-        struct
-        {
-                uint16_t        bus;
-                uint8_t         dev;
-                uint8_t         func;
-                uint8_t         guest_slot;
-        }                       bdf_list[4];
-    } surfman_vgpu_mode_t;
 
     typedef struct surfman_plugin
     {
@@ -594,25 +412,6 @@ extern "C"
         int                         (*display)(struct surfman_plugin *plugin,
                                                surfman_display_t *config,
                                                size_t size);
-
-        /*
-        ** new_vgpu: Create a new vgpu instance
-        **
-        ** info: Information about the vgpu, check surfman_vgpu_info_t for more.
-        ** return: NULL or error, valid pointer on success.
-        **
-        ** A vgpu is a plugin representation of a gpu but in a vm.
-        */
-        surfman_vgpu_t *            (*new_vgpu)(struct surfman_plugin *plugin,
-                                                surfman_vgpu_info_t *info);
-
-        /*
-        ** free_vgpu: Free and destroy all the resourced assosiated with a vgpu
-        **
-        ** vgpu: Instance of a vgpu.
-        */
-        void                        (*free_vgpu)(struct surfman_plugin *plugin,
-                                                 surfman_vgpu_t *vgpu);
 
         /*
         ** get_monitors: Enumerate the physical monitors attached to the adapter
@@ -744,7 +543,7 @@ extern "C"
         int                         (*copy_psurface_on_surface)(struct surfman_plugin *plugin,
                                                                 surfman_psurface_t psurface);
 
-         /*
+        /*
         ** free_psurface: Destroy and free all the resource assosiated with a
         **                psurface.
         **
@@ -779,14 +578,6 @@ extern "C"
         ** decrease_brightness: Decrease_brightness
         */
         void                        (*decrease_brightness)(struct surfman_plugin *plugin);
-
-        /*
-        ** get_vgpu_mode: Return hint about plugin VGPU support and which host device
-        **                to pass through.
-        **                Return SURFMAN_ERROR if plugin doesn't support VGPU.
-        **
-        */
-        int                         (*get_vgpu_mode)(struct surfman_plugin *plugin, surfman_vgpu_mode_t *mode);
 
         struct
         {

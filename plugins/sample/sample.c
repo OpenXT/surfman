@@ -156,34 +156,11 @@ sample_decrease_brightness (surfman_plugin_t * p)
 
 }
 
-surfman_vgpu_t *
-sample_new_vgpu (surfman_plugin_t * p,
-                 surfman_vgpu_info_t * info)
-{
-    return NULL;
-}
-
-void
-sample_free_vgpu (surfman_plugin_t * p,
-                  surfman_vgpu_t * vgpu)
-{
-
-}
-
-int
-sample_get_vgpu_mode (surfman_plugin_t * p,
-                      surfman_vgpu_mode_t *mode)
-{
-    return SURFMAN_ERROR;
-}
-
 
 surfman_plugin_t surfman_plugin = {
   .init = sample_init,
   .shutdown = sample_shutdown,
   .display = sample_display,
-  .new_vgpu = sample_new_vgpu,
-  .free_vgpu = sample_free_vgpu,
   .get_monitors = sample_get_monitors,
   .set_monitor_modes = sample_set_monitor_modes,
   .get_monitor_info = sample_get_monitor_info,
@@ -200,7 +177,6 @@ surfman_plugin_t surfman_plugin = {
   .post_s3 = sample_post_s3,
   .increase_brightness = sample_increase_brightness,
   .decrease_brightness = sample_decrease_brightness,
-  .get_vgpu_mode = sample_get_vgpu_mode,
   .options = { 1, SURFMAN_FEATURE_NONE },
   .notify = SURFMAN_NOTIFY_NONE
 };

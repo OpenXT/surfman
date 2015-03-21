@@ -40,13 +40,6 @@ struct plugin
   surfman_monitor_t monitors[PLUGIN_MONITOR_MAX];
 };
 
-struct vgpu_mode
-{
-  struct plugin *p;
-  surfman_vgpu_mode_t m;
-};
-
-
 #define PLUGIN_CALL(p,method,...) \
     ( (p)->interface->method((p)->interface, ##__VA_ARGS__) )
 #define PLUGIN_CALL_CAST(p,cast,method,args...) \

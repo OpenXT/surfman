@@ -39,7 +39,6 @@ struct effect
 enum
 {
   DISPLAY_TYPE_SURFACE,
-  DISPLAY_TYPE_VMONITOR,
   DISPLAY_TYPE_BLANK,
 };
 
@@ -58,7 +57,6 @@ struct display
   union
   {
     struct surface *surface;
-    surfman_vmonitor_t vmonitor;
   } u;
 
   struct effect effect;

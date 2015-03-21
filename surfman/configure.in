@@ -376,67 +376,6 @@ ORIG_CPPFLAGS="${CPPFLAGS}"
 LDFLAGS="${ORIG_LDFLAGS}"
 CPPFLAGS="${ORIG_CPPFLAGS}"
 
-# libvgaemu
-
-LIBVGAEMU_CONFIG=no
-AC_ARG_WITH([libvgaemu],
-            AC_HELP_STRING([--with-libvgaemu=PATH],[Path to libvgaemu-config]),
-                    LIBVGAEMU_CONFIG=$with_libvgaemu,LIBVGAEMU_CONFIG=no)
-
-case "x$LIBVGAEMU_CONFIG" in
-    xno)
-    AC_PATH_PROG(LIBVGAEMU_CONFIG, libvgaemu-config, no)
-    ;;
-    x|xyes)
-    AC_PATH_PROG(LIBVGAEMU_CONFIG, libvgaemu-config, no)
-    ;;
-    *)
-    ;;
-esac
-
-if ! test -x $LIBVGAEMU_CONFIG; then
-    PKG_CHECK_MODULES([LIBVGAEMU], [libvgaemu])
-    LIBVGAEMU_INC="$LIBVGAEMU_CLAGS"
-    LIBVGAEMU_LIB="$LIBVGAEMU_LIBS"
-else
-    LIBVGAEMU_INC=`$LIBVGAEMU_CONFIG --clags`
-    LIBVGAEMU_LIB=`$LIBVGAEMU_CONFIG --libs`
-fi
-
-AC_SUBST(LIBVGAEMU_INC)
-AC_SUBST(LIBVGAEMU_LIB)
-
-# libpciemu
-
-LIBPCIEMU_CONFIG=no
-AC_ARG_WITH([libpciemu],
-            AC_HELP_STRING([--with-libpciemu=PATH],[Path to libpciemu-config]),
-                    LIBPCIEMU_CONFIG=$with_libpciemu,LIBPCIEMU_CONFIG=no)
-
-case "x$LIBPCIEMU_CONFIG" in
-    xno)
-    AC_PATH_PROG(LIBPCIEMU_CONFIG, libpciemu-config, no)
-    ;;
-    x|xyes)
-    AC_PATH_PROG(LIBPCIEMU_CONFIG, libpciemu-config, no)
-    ;;
-    *)
-    ;;
-esac
-
-if ! test -x $LIBPCIEMU_CONFIG; then
-    PKG_CHECK_MODULES([LIBPCIEMU], [libpciemu])
-    LIBPCIEMU_INC="$LIBPCIEMU_CLAGS"
-    LIBPCIEMU_LIB="$LIBPCIEMU_LIBS"
-else
-    LIBPCIEMU_INC=`$LIBPCIEMU_CONFIG --clags`
-    LIBPCIEMU_LIB=`$LIBPCIEMU_CONFIG --libs`
-fi
-
-AC_SUBST(LIBPCIEMU_INC)
-AC_SUBST(LIBPCIEMU_LIB)
-
-
 AC_OUTPUT([Makefile
 	   src/Makefile
 	   src/version.h

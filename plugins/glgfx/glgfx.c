@@ -1138,28 +1138,12 @@ glgfx_free_psurface (surfman_plugin_t * plugin,
     }
 }
 
-surfman_vgpu_t *
-glgfx_new_vgpu (surfman_plugin_t * p,
-                surfman_vgpu_info_t * info)
-{
-    info( "glgfx_new_vgpu");
-    return NULL;
-}
-
-void
-glgfx_free_vgpu (surfman_plugin_t * p,
-                 surfman_vgpu_t * vgpu)
-{
-    info( "glgfx_free_vgpu");
-}
 
 
 surfman_plugin_t surfman_plugin = {
     .init = glgfx_init,
     .shutdown = glgfx_shutdown,
     .display = glgfx_display,
-    .new_vgpu = glgfx_new_vgpu,
-    .free_vgpu = glgfx_free_vgpu,
     .get_monitors = glgfx_get_monitors,
     .set_monitor_modes = glgfx_set_monitor_modes,
     .get_monitor_info = glgfx_get_monitor_info_by_monitor,

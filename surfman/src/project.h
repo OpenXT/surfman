@@ -95,12 +95,10 @@
 #include <libdmbus.h>
 #include <edid.h>
 #include <pciaccess.h>
-#include <libpciemu.h>
 
 #include "surface.h"
 #include "domain.h"
 #include "plugin.h"
-#include "vgpu.h"
 #include "xenstore-helper.h"
 #include "display.h"
 #include "splashscreen.h"

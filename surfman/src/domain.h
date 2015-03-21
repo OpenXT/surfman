@@ -53,7 +53,6 @@ struct domain
   LIST_ENTRY (struct domain) link;
 
   int domid;
-  mapcache_t mapcache;
 
   LIST_HEAD (, struct device) devices;
 };

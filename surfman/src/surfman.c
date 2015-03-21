@@ -50,34 +50,6 @@ static void startup (void)
   register_spinner ();
 }
 
-void surfman_pciemu_logging (libpciemu_loglvl loglvl, const char *fmt, ...)
-{
-  va_list ap;
-  surfman_loglvl level = MESSAGE_INFO;
-
-  switch (loglvl)
-    {
-      case LIBPCIEMU_MESSAGE_DEBUG:
-        level = SURFMAN_DEBUG;
-        break;
-      case LIBPCIEMU_MESSAGE_INFO:
-        level = SURFMAN_INFO;
-        break;
-      case LIBPCIEMU_MESSAGE_WARNING:
-        level = SURFMAN_WARNING;
-        break;
-      case LIBPCIEMU_MESSAGE_ERROR:
-        level = SURFMAN_ERROR;
-        break;
-      case LIBPCIEMU_MESSAGE_FATAL:
-        level = SURFMAN_FATAL;
-        break;
-    }
-
-  va_start (ap, fmt);
-  surfman_vmessage (level, fmt, ap);
-  va_end(ap);
-}
 
 int main (int argc, char *argv[])
 {
@@ -149,11 +121,6 @@ int main (int argc, char *argv[])
 
   display_init ();
   pci_system_init ();
-
-  if (libpciemu_init (surfman_pciemu_logging))
-    {
-      fatal ("libpciemu_init() failed. aborting.");
-    }
 
   if (!no_plugin)
       plugin_init (plugin_path, safe_graphics);

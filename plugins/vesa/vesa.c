@@ -621,28 +621,11 @@ vesa_free_psurface (surfman_plugin_t * plugin,
     unmap_fb(surf);
 }
 
-surfman_vgpu_t *
-vesa_new_vgpu (surfman_plugin_t * p,
-                surfman_vgpu_info_t * info)
-{
-    info( "vesa_new_vgpu");
-    return NULL;
-}
-
-void
-vesa_free_vgpu (surfman_plugin_t * p,
-                 surfman_vgpu_t * vgpu)
-{
-    info( "vesa_free_vgpu");
-}
-
 
 surfman_plugin_t surfman_plugin = {
     .init = vesa_init,
     .shutdown = vesa_shutdown,
     .display = vesa_display,
-    .new_vgpu = vesa_new_vgpu,
-    .free_vgpu = vesa_free_vgpu,
     .get_monitors = vesa_get_monitors,
     .set_monitor_modes = vesa_set_monitor_modes,
     .get_monitor_info = vesa_get_monitor_info_by_monitor,

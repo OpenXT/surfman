@@ -156,34 +156,11 @@ websocket_decrease_brightness (surfman_plugin_t * p)
 
 }
 
-surfman_vgpu_t *
-websocket_new_vgpu (surfman_plugin_t * p,
-                 surfman_vgpu_info_t * info)
-{
-    return NULL;
-}
-
-void
-websocket_free_vgpu (surfman_plugin_t * p,
-                  surfman_vgpu_t * vgpu)
-{
-
-}
-
-int
-websocket_get_vgpu_mode (surfman_plugin_t * p,
-                      surfman_vgpu_mode_t *mode)
-{
-    return SURFMAN_ERROR;
-}
-
 
 surfman_plugin_t surfman_plugin = {
   .init = websocket_init,
   .shutdown = websocket_shutdown,
   .display = websocket_display,
-  .new_vgpu = websocket_new_vgpu,
-  .free_vgpu = websocket_free_vgpu,
   .get_monitors = websocket_get_monitors,
   .set_monitor_modes = websocket_set_monitor_modes,
   .get_monitor_info = websocket_get_monitor_info,
@@ -200,7 +177,6 @@ surfman_plugin_t surfman_plugin = {
   .post_s3 = websocket_post_s3,
   .increase_brightness = websocket_increase_brightness,
   .decrease_brightness = websocket_decrease_brightness,
-  .get_vgpu_mode = websocket_get_vgpu_mode,
   .options = { 1, SURFMAN_FEATURE_NONE },
   .notify = SURFMAN_NOTIFY_NONE
 };

@@ -733,28 +733,11 @@ vnc_decrease_brightness (surfman_plugin_t * p)
 {
 }
 
-static surfman_vgpu_t *
-vnc_new_vgpu (surfman_plugin_t * p,
-                 surfman_vgpu_info_t * info)
-{
-    info("vnc: new_vgpu");
-
-    return NULL;
-}
-
-static void
-vnc_free_vgpu (surfman_plugin_t * p,
-                  surfman_vgpu_t * vgpu)
-{
-    info("vnc: free_vgpu");
-}
 
 surfman_plugin_t surfman_plugin = {
   .init = vnc_init,
   .shutdown = vnc_shutdown,
   .display = vnc_display,
-  .new_vgpu = vnc_new_vgpu,
-  .free_vgpu = vnc_free_vgpu,
   .get_monitors = vnc_get_monitors,
   .set_monitor_modes = vnc_set_monitor_modes,
   .get_monitor_info = vnc_get_monitor_info_by_monitor,

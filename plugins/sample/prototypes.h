@@ -17,6 +17,4 @@
  */
 
 /* sample.c */
-extern surfman_vgpu_t *sample_new_vgpu(surfman_plugin_t *p, surfman_vgpu_info_t *info);
-extern void sample_free_vgpu(surfman_plugin_t *p, surfman_vgpu_t *vgpu);
 extern surfman_plugin_t surfman_plugin;

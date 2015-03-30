@@ -449,22 +449,11 @@ static void fb_free_psurface(surfman_plugin_t *plugin, surfman_psurface_t psurfa
     unmap_fb(psurface);
 }
 
-surfman_vgpu_t *fb_new_vgpu(surfman_plugin_t *p, surfman_vgpu_info_t *info)
-{
-    return NULL;
-}
-
-void fb_free_vgpu(surfman_plugin_t *p, surfman_vgpu_t *vgpu)
-{
-    return;
-}
 
 surfman_plugin_t surfman_plugin = {
     .init = fb_init,
     .shutdown = fb_shutdown,
     .display = fb_display,
-    .new_vgpu = fb_new_vgpu,
-    .free_vgpu = fb_free_vgpu,
     .get_monitors = fb_get_monitors,
     .set_monitor_modes = fb_set_monitor_modes,
     .get_monitor_info = fb_get_monitor_info_by_monitor,

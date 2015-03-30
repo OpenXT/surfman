@@ -254,10 +254,6 @@ plugin_poll (int fd, short event, void *priv)
       resolution_refresh_current (p);
     }
 
-  /* Also process individual vgpu notifications */
-  vgpu_poll_notifications ();
-
-  /* Rearm timer */
   event_add (&plugin_poll_event, &tv);
 }
 
@@ -338,7 +334,6 @@ plugin_scan_monitors (struct plugin *plugin)
   plugin->monitor_count = rc;
 
   display_update_monitors (plugin, plugin->monitors, rc);
-  vgpu_update_plugin_vmonitors (plugin);
 
   domain_set_visible (NULL, 0);
 
@@ -464,50 +459,6 @@ plugin_need_refresh (struct plugin *p)
   return PLUGIN_GET_OPTION(p, features) & SURFMAN_FEATURE_NEED_REFRESH;
 }
 
-struct plugin *
-plugin_find_vgpu (surfman_vgpu_info_t *info, surfman_vgpu_t **pvgpu)
-{
-  surfman_vgpu_t *vgpu;
-  struct plugin *p;
-
-  LIST_FOREACH (p, &plugin_list, link)
-  {
-    vgpu = PLUGIN_CALL (p, new_vgpu, info);
-
-    if (vgpu)
-      {
-        *pvgpu = vgpu;
-        return p;
-      }
-  }
-
-  return NULL;
-}
-
-int
-plugin_get_vgpu_modes(struct vgpu_mode *modes, int len)
-{
-  struct plugin *p;
-  int count = 0;
-  int rc;
-
-  LIST_FOREACH (p, &plugin_list, link)
-  {
-    int i;
-
-    if (count == len)
-      break;
-
-    if (PLUGIN_HAS_METHOD (p, get_vgpu_mode))
-      {
-        rc = PLUGIN_CALL (p, get_vgpu_mode, &modes[count].m);
-        if (!rc)
-          modes[count++].p = p;
-      }
-  }
-
-  return count;
-}
 
 int
 plugin_display_commit (int force)

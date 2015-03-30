@@ -57,11 +57,13 @@ rpc_connect (dmbus_client_t client,
       dev = ioemugfx_device_create (d, ops);
       break;
     case DEVICE_TYPE_XENGFX:
-      dev = xengfx_device_create (d, ops);
+      surfman_error("Attempted to connect a legacy XenGFX device, but support for XenGFX has been dropped!");
+      dev = NULL;
       break;
     case DEVICE_TYPE_EMULATION:
     case DEVICE_TYPE_PASSTHROUGH:
-      dev = vgpu_device_create (d, ops);
+      surfman_error("Attempted to connect a backend provider in emulation or passthrough model; support for these modes has been dropped.");
+      dev = NULL;
       break;
     default:
       dev = NULL;

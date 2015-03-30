@@ -18,8 +18,7 @@
 
 INCLUDES = ${LIBXC_INC}
 
-SRCS = surfman.c mapcache.c io.c util.c backtrace.c xc.c rect.c configfile.c \
-       surface.c
+SRCS = surfman.c util.c backtrace.c xc.c rect.c configfile.c surface.c
 CPROTO = cproto
 
 SURFMANSRCS=${SRCS}

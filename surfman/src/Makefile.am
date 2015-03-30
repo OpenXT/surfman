@@ -44,7 +44,6 @@ SRCS=surfman.c \
      lockfile.c \
      surface.c \
      xenstore-helper.c \
-     vgpu.c \
      plugin.c \
      resolution.c \
      xenfb.c \
@@ -52,7 +51,6 @@ SRCS=surfman.c \
      snapshot.c \
      display.c \
      rpc.c \
-     xengfx.c \
      splashscreen.c \
      fbtap.c
 

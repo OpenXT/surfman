@@ -481,11 +481,6 @@ surfman_plugin_t surfman_plugin = {
     /* Management of surface to monitor mapping. */
     .display = drmp_display,
 
-    /* In-guest GPU entry/exit points. */
-    .new_vgpu = OPTIONAL,
-    .free_vgpu = OPTIONAL,
-    .get_vgpu_mode = OPTIONAL,
-
     /* Monitors management. */
     .get_monitors = drmp_get_monitors,
     .set_monitor_modes = drmp_set_monitor_modes,
@@ -517,19 +512,3 @@ surfman_plugin_t surfman_plugin = {
     },
     .notify = SURFMAN_NOTIFY_NONE
 };
-
-#if 0
-/* Surfman VGPU interface */
-surfman_vgpu_ta surfman_vgpu = {
-    /* vmonitor management. */
-    .new_vmonitor = REQUIRED,
-    .free_vmonitor = REQUIRED,
-    .get_psurface_by_vmonitor = REQUIRED,
-
-    /* PCI ressource management. */
-    .update_bar = REQUIRED,
-    .config_write = REQUIRED,
-    .confir_read = REQUIRED,
-};
-#endif
-

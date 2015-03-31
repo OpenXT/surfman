@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2015 Assured Information Security, Inc.
  * Copyright (c) 2014 Citrix Systems, Inc.
  * 
  * This library is free software; you can redistribute it and/or
@@ -67,6 +68,27 @@ static uint32_t find_drm_property_by_name(int fd, drmModeConnector *connector, c
  */
 static int supports_panel_fitting(int fd, drmModeConnector *connector) {
     return find_drm_property_by_name(fd, connector, SCALING_MODE_PROPERTY) > 0;
+}
+
+/**
+ * Returns true iff we should avoid scaling modes (fullscreen, aspect) when using a panel
+ * fitter. This method is used to add per-hardware panel fitting quirks.
+ */
+static int should_avoid_scaling(struct drm_monitor *monitor, struct drm_framebuffer *drmfb) {
+
+    //QUIRK:
+    //Many adapters and drivers (including the QEMU VGA display) will refuse use modes whose 
+    //width is not divisible by 8. Unfortunately, 1366x768 is a common prefered mode-- many
+    //adapters compensate for this by adopting a 1360x768 mode, instead-- which many monitors
+    //accept silently.
+
+    //Compute what the monitor's preferred resolution would be were it rounded down to be 
+    //disvisible by 8.
+    uint16_t preferred_width_aligned = monitor->prefered_mode.hdisplay & ~0b111;
+
+    //If we're trying to adopt a mode that's using this "round down" logic, don't panel fit!
+    return preferred_width_aligned == drmfb->fb.width;
+
 }
 
 
@@ -478,11 +500,21 @@ modeset:
                     monitor->plane->id, monitor->connector, strerror(-rc));
             goto fail_setplane;
         }
+
+
     } else {
+        int scaling_mode = configured_scaling_mode;
+
+        //If one of our per-panel quirks suggests that we avoid scaling, do so.
+        if(should_avoid_scaling(monitor, drmfb)) {
+            DRM_INF("A per-display quirk is recommending that we avoid scaling for this panel. Centering the display, instead."); 
+            scaling_mode = DRM_MODE_SCALE_CENTER;
+        }
+
         //Set up the scaling mode, which was previously read from surfman.conf.
-        rc = drm_connector_set_scaling(monitor->device->fd, con, configured_scaling_mode);
+        rc = drm_connector_set_scaling(monitor->device->fd, con, scaling_mode);
         if(rc < 0) {
-            DRM_INF("Error setting up scaling: %s.", strerror(-rc));
+            DRM_ERR("Error setting up scaling: %s.", strerror(-rc));
         }
     }
 

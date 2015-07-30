@@ -610,9 +610,14 @@ static int i915_match_udev_device(struct udev *udev, struct udev_device *device)
         DRM_DBG("%s has no devnode (likely udev subdevice of DRM subsystem).", udev_device_get_sysname(device));
         return EEXIST;
     }
-    /* XXX: Not sure what we could use that node for, but it comes with every card
-     *      and usually is minor 64. */
-    if (!strncmp(udev_device_get_sysname(device), "controlD64", sizeof ("controlD64") - 1)) {
+    /* XXX: We currently do not use for the control (min:64) and render (min:128) nodes. */
+    /* Ignore controlD* nodes in general */
+    if (!strncmp(udev_device_get_sysname(device), "controlD", sizeof ("controlD") - 1)) {
+        DRM_DBG("Ignoring redundant %s DRM device.", udev_device_get_sysname(device));
+        return EEXIST;	/* We already, or will, have the other device node. */
+    }
+    /* Ignore renderD* nodes in general */
+    if (!strncmp(udev_device_get_sysname(device), "renderD", sizeof ("renderD") - 1)) {
         DRM_DBG("Ignoring redundant %s DRM device.", udev_device_get_sysname(device));
         return EEXIST;	/* We already, or will, have the other device node. */
     }

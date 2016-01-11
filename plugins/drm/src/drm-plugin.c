@@ -470,6 +470,52 @@ INTERNAL void drmp_restore_brightness(surfman_plugin_t *plugin)
     backlight_restore(backlight);
 }
 
+INTERNAL void drmp_dpms_on(surfman_plugin_t *plugin)
+{
+    (void) plugin;
+    struct drm_device *d;
+    struct drm_monitor *m;
+    int rc;
+
+    DRM_DBG("%s, dpms on", __FUNCTION__);
+
+    list_for_each_entry(d, &devices, l) {
+        drm_device_set_master(d);
+        list_for_each_entry(m, &(d->monitors), l_dev) {
+            rc = drm_monitor_dpms_on(m);
+            if (rc) {
+                DRM_DBG("%s, dpms on failed for monitor at conn=%d, enc=%d, "
+                        "crtc=%d - %s", __FUNCTION__, m->connector, m->encoder,
+                        m->crtc, strerror(rc));
+            }
+        }
+        drm_device_drop_master(d);
+    }
+}
+
+INTERNAL void drmp_dpms_off(surfman_plugin_t *plugin)
+{
+    (void) plugin;
+    struct drm_device *d;
+    struct drm_monitor *m;
+    int rc;
+
+    DRM_DBG("%s, dpms off", __FUNCTION__);
+
+    list_for_each_entry(d, &devices, l) {
+        drm_device_set_master(d);
+        list_for_each_entry(m, &(d->monitors), l_dev) {
+            rc = drm_monitor_dpms_off(m);
+            if (rc) {
+                DRM_DBG("%s, dpms off failed for monitor at conn=%d, enc=%d, "
+                        "crtc=%d - %s", __FUNCTION__, m->connector, m->encoder,
+                        m->crtc, strerror(rc));
+            }
+        }
+        drm_device_drop_master(d);
+    }
+}
+
 #define OPTIONAL (NULL)
 #define REQUIRED ((void*)0xDEADBEEF)
 /* Surfman plugin interface. */
@@ -504,6 +550,11 @@ surfman_plugin_t surfman_plugin = {
     .increase_brightness = drmp_increase_brightness,
     .decrease_brightness = drmp_decrease_brightness,
     .restore_brightness = drmp_restore_brightness,
+
+    /* DPMS mode management. */
+    .dpms_on = drmp_dpms_on,
+    .dpms_off = drmp_dpms_off,
+
     .options = {
         64,   /* libDRM requires a 64 bytes alignment (not 64bit ;). */
         0     /* TODO: SURFMAN_FEATURE_NEED_REFRESH triggers a cache-incohrency with xenfb2

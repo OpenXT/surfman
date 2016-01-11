@@ -34,6 +34,8 @@ static const struct
   { "dump_all_screens", dbus_dump_all_screens },
   { "increase_brightness", dbus_increase_brightness },
   { "decrease_brightness", dbus_decrease_brightness },
+  { "dpms_on", dbus_dpms_on },
+  { "dpms_off", dbus_dpms_off },
   { "pre_s3", dbus_pre_s3 },
   { "post_s3", dbus_post_s3 },
   { "display_image", dbus_display_image },

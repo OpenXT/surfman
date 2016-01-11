@@ -426,6 +426,32 @@ void plugin_restore_brightness (void)
     }
 }
 
+void plugin_dpms_on (void)
+{
+  struct plugin *p;
+
+  LIST_FOREACH (p, &plugin_list, link)
+    {
+      /* dpms_on has been implemented from 2.1.2 */
+      if (PLUGIN_CHECK_VERSION(p, 2, 1, 2)
+          && PLUGIN_HAS_METHOD (p, dpms_on))
+        PLUGIN_CALL (p, dpms_on);
+    }
+}
+
+void plugin_dpms_off (void)
+{
+  struct plugin *p;
+
+  LIST_FOREACH (p, &plugin_list, link)
+    {
+      /* dpms_off has been implemented from 2.1.2 */
+      if (PLUGIN_CHECK_VERSION(p, 2, 1, 2)
+          && PLUGIN_HAS_METHOD (p, dpms_off))
+        PLUGIN_CALL (p, dpms_off);
+    }
+}
+
 #if 0
 void
 plugin_set_guest_resolution (unsigned int domid)

@@ -106,6 +106,24 @@ dbus_decrease_brightness (DBusMessage *msg, DBusMessage *reply)
 }
 
 dbus_bool_t
+dbus_dpms_on (DBusMessage *msg, DBusMessage *reply)
+{
+  plugin_dpms_on ();
+
+  //Re-display the most recently displayed domain.
+  domain_set_visible(NULL, false);
+  return TRUE;
+}
+
+dbus_bool_t
+dbus_dpms_off (DBusMessage *msg, DBusMessage *reply)
+{
+  plugin_dpms_off ();
+
+  return TRUE;
+}
+
+dbus_bool_t
 dbus_pre_s3 (DBusMessage *msg, DBusMessage *reply)
 {
   plugin_pre_s3 ();

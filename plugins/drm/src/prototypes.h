@@ -62,6 +62,8 @@ extern const struct drm_framebuffer_ops framebuffer_foreign_ops;
 extern void drm_monitor_info(const struct drm_monitor *m);
 extern int drm_monitors_scan(struct drm_device *device);
 extern int drm_monitor_init(struct drm_monitor *monitor);
+extern int drm_monitor_dpms_on(struct drm_monitor *monitor);
+extern int drm_monitor_dpms_off(struct drm_monitor *monitor);
 /* udev.c */
 extern int udev_process_subsystem(struct udev *udev, const char *subsystem, void *(*action)(struct udev *, struct udev_device *));
 extern void udev_settle(struct udev *udev, unsigned int timeout);

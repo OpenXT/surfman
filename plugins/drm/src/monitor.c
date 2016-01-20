@@ -162,6 +162,19 @@ static int drmModeSetDpmsProp(int fd, drmModeConnector *connector, int value)
 
 static int drm_monitor_disable_dpms(struct drm_monitor *monitor)
 {
+    /* TODO for now, set DPMS to On for each monitor as it is initialized. I believe
+     * this will disable the default power saving timeout. It may end up that this is
+     * the best place to initially set DPMS state to On in the end and we manage timing
+     * it out into power saving states with xenmgr.
+     */
+    return drm_monitor_dpms_on(monitor);
+}
+
+/*
+ * Set the DPMS mode of a monitor for power saving purposes.
+ */
+int drm_monitor_dpms_on(struct drm_monitor *monitor)
+{
     drmModeConnector *c;
     int rc;
 
@@ -170,12 +183,22 @@ static int drm_monitor_disable_dpms(struct drm_monitor *monitor)
         return -errno;
     }
 
-    /* TODO for now, set DPMS to On for each monitor as it is initialized. I believe
-     * this will disable the default power saving timeout. It may end up that this is
-     * the best place to initially set DPMS state to On in the end and we manage timing
-     * it out into power saving states with xenmgr.
-     */
     rc = drmModeSetDpmsProp(monitor->device->fd, c, DRM_MODE_DPMS_ON);
+    drmModeFreeConnector(c);
+    return rc;
+}
+
+int drm_monitor_dpms_off(struct drm_monitor *monitor)
+{
+    drmModeConnector *c;
+    int rc;
+
+    c = drmModeGetConnector(monitor->device->fd, monitor->connector);
+    if (!c) {
+        return -errno;
+    }
+
+    rc = drmModeSetDpmsProp(monitor->device->fd, c, DRM_MODE_DPMS_OFF);
     drmModeFreeConnector(c);
     return rc;
 }

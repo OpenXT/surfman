@@ -611,4 +611,14 @@ extern "C"
          */
         void                        (*restore_brightness)(struct surfman_plugin *plugin);
 
+        /*
+         * dpms_on : power screen on
+         */
+        void                        (*dpms_on)(struct surfman_plugin *plugin);
+
+        /*
+         * dpms_off : power screen off
+         */
+        void                        (*dpms_off)(struct surfman_plugin *plugin);
+
     } surfman_plugin_t;

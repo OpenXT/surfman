@@ -281,6 +281,23 @@ static int i915_plane_set(struct drm_plane *plane)
     return rc;
 }
 
+static void i915_plane_unset(struct drm_plane *plane)
+{
+    struct drm_device *d = plane->device;
+    int rc;
+
+    drm_device_set_master(d);
+    /* Passing framebuffer id 0 for this plane on its CRTC will trigger
+     * drm_mode_setplane() -> setplane_internal() -> disable_plane() */
+    rc = drmModeSetPlane(d->fd, plane->id, plane->crtc, 0, 0,
+                         0, 0, 0, 0, 0, 0, 0, 0);
+    drm_device_drop_master(d);
+    if (rc) {
+        DRM_WRN("Could not unset plane %d on crtc %d, device \"%s\" (%s).",
+                plane->id, plane->crtc, d->devnode, strerror(errno));
+    }
+}
+
 static void i915_plane_release(struct drm_plane *plane)
 {
     /* XXX: This call release the framebuffer (if bound already). */
@@ -325,6 +342,7 @@ static struct drm_framebuffer *i915_framebuffer_new(struct drm_device *device, s
         drmfb->ops->release(drmfb);
         return NULL;
     }
+
 succeed:
     /* TODO: We might find useful to have a list of framebuffers for each device. */
     return drmfb;
@@ -572,6 +590,7 @@ static void i915_unset(struct drm_monitor *monitor)
     monitor->surface = NULL;
     list_del(&monitor->l_sur);
     if (monitor->plane) {
+        i915_plane_unset(monitor->plane);
         i915_plane_release(monitor->plane);
         monitor->plane = NULL;
     }

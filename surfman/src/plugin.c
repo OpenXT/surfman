@@ -17,6 +17,8 @@
  */
 #include "project.h"
 
+#define PLUGIN_VERSION_SUPPORTED(v) (SURFMAN_VERSION_MAJOR(v) == VERSION_MAJOR)
+
 static struct event plugin_poll_event;
 
 static

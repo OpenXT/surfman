@@ -19,79 +19,47 @@
 #ifndef __PROJECT_H__
 #define __PROJECT_H__
 
-
 #include "config.h"
 
-#ifdef TM_IN_SYS_TIME
 #include <sys/time.h>
-#ifdef TIME_WITH_SYS_TIME
 #include <time.h>
-#endif
-#else
-#ifdef TIME_WITH_SYS_TIME
-#include <sys/time.h>
-#endif
-#include <time.h>
-#endif
 
 #include <stdio.h>
 #include <stdlib.h>
-
-#ifdef HAVE_MALLOC_H
-#include <malloc.h>
-#endif
-
-#ifdef HAVE_STRING_H
-#include <string.h>
-#endif
-
-#ifdef HAVE_STRINGS_H
-#include <strings.h>
-#endif
-
-#ifdef HAVE_UNISTD_H
-#include <unistd.h>
-#endif
-
-#if defined(HAVE_STDINT_H)
 #include <stdint.h>
-#elif defined(HAVE_SYS_INT_TYPES_H)
-#include <sys/int_types.h>
-#endif
+#include <stdarg.h>
 
-#include <sys/mman.h>
+#include <errno.h>
+
+#include <string.h>
+#include <strings.h>
+
+#include <unistd.h>
+#include <fcntl.h>
+
+#include <dlfcn.h>
+
+#include <dirent.h>
 
 #include <syslog.h>
 
-#include <dlfcn.h>
-
-#include <time.h>
-#include <fcntl.h>
 #include <sys/resource.h>
-#include <errno.h>
 #include <sys/mman.h>
-#include <sys/time.h>
 #include <sys/ioctl.h>
-#include <dlfcn.h>
-#include <stdarg.h>
 #include <sys/types.h>
-#include <dirent.h>
 #include <sys/wait.h>
 #include <sys/stat.h>
 
 #include <dbus/dbus.h>
+
+#include <xenctrl.h>
 #include <xenstore.h>
+#include <xenbackend.h>
 
 #include <fb2if.h>
 #include <fbtap.h> /* kernel module */
-#include <xenbackend.h>
-
-#ifdef HAVE_XENCTRL_H
-#include <xenctrl.h>
-#endif
 
 #include <surfman.h>
-#include <stdlib.h>
 #include <libdmbus.h>
 #include <edid.h>
 #include <pciaccess.h>
@@ -103,13 +71,7 @@
 #include "display.h"
 #include "splashscreen.h"
 
-#ifdef PROTOS
-#define NOPROTO static
-#else
-#define NOPROTO
-#endif
-
 #include "prototypes.h"
-#include "version.h"
 
 #endif /* __PROJECT_H__ */
+

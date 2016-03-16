@@ -1,4 +1,4 @@
-#
+N#
 # Copyright (c) 2013 Citrix Systems, Inc.
 # 
 # This library is free software; you can redistribute it and/or
@@ -20,17 +20,17 @@ DBUS_CLIENT_IDLS=
 DBUS_SERVER_IDLS=surfman
 
 CPROTO=cproto
-INCLUDES =  ${LIBSURFMAN_INC} \
-		${LIBVGAEMU_INC} \
-	    ${DBUS_CFLAGS} \
-	    ${PNG_CFLAGS} \
-	    ${LIBXENSTORE_INC} \
-	    ${LIBXENBACKEND_INC} \
-	    ${LIBXC_INC} \
-	    ${LIBDMBUS_INC} \
-	    ${LIBEDID_INC} \
-	    ${LIBPCIACCESS_INC} \
-		${LIBPCIEMU_INC}
+AM_CPPFLAGS = ${LIBSURFMAN_INC} \
+	      ${LIBVGAEMU_INC} \
+	      ${DBUS_CFLAGS} \
+    	      ${PNG_CFLAGS} \
+    	      ${LIBXENSTORE_INC} \
+    	      ${LIBXENBACKEND_INC} \
+    	      ${LIBXC_INC} \
+    	      ${LIBDMBUS_INC} \
+    	      ${LIBEDID_INC} \
+    	      ${LIBPCIACCESS_INC} \
+	      ${LIBPCIEMU_INC}
 
 noinst_HEADERS=project.h prototypes.h
 

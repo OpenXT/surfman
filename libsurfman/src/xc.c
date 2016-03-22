@@ -90,14 +90,13 @@ static void destroy (struct xentoollog_logger *logger_in)
     (void) logger_in;
 }
 
-INTERNAL struct xentoollog_logger xc_logger = {
+struct xentoollog_logger xc_logger = {
   .vmessage = vmessage,
   .progress = progress,
   .destroy = destroy,
 };
 
-EXTERNAL int
-xc_has_vtd (void)
+int xc_has_vtd (void)
 {
   static int has_hvm_directio = -1;
 
@@ -109,7 +108,7 @@ xc_has_vtd (void)
       info.max_cpu_id = MAX_CPU_ID;
       if (xc_physinfo(xch, &info))
         {
-          fatal ("xc_physinfo(): %s", strerror(errno));
+          surfman_fatal ("xc_physinfo(): %s", strerror(errno));
           return 0;
         }
 
@@ -120,26 +119,24 @@ xc_has_vtd (void)
 }
 
 
-EXTERNAL void
-xc_init (void)
+void xc_init (void)
 {
   if (!xch)
     {
       xch = xc_interface_open (&xc_logger, &xc_logger, 0);
       if (!xch)
-        fatal ("Failed to open XC interface");
+        surfman_fatal ("Failed to open XC interface");
     }
 
   if (privcmd_fd == -1)
     {
       privcmd_fd = open ("/proc/xen/privcmd", O_RDWR);
       if (privcmd_fd < 0)
-        fatal ("Failed to open privcmd");
+        surfman_fatal ("Failed to open privcmd");
     }
 }
 
-EXTERNAL int
-xc_domid_exists (int domid)
+int xc_domid_exists (int domid)
 {
   xc_dominfo_t info;
   int rc;
@@ -148,8 +145,8 @@ xc_domid_exists (int domid)
   return rc >= 0 ? info.domid == (domid_t)domid : 0;
 }
 
-EXTERNAL void *xc_mmap_foreign(void *addr, size_t length, int prot,
-                               int domid, xen_pfn_t *pages)
+void *xc_mmap_foreign(void *addr, size_t length, int prot,
+                      int domid, xen_pfn_t *pages)
 {
   void *ret;
   int rc;
@@ -178,5 +175,4 @@ EXTERNAL void *xc_mmap_foreign(void *addr, size_t length, int prot,
 
   return ret;
 }
-
 

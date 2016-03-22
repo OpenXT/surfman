@@ -22,8 +22,7 @@
 #include <dlfcn.h>
 #include <execinfo.h>
 
-INTERNAL void
-bt(void)
+void bt(void)
 {
   void *ba[256];
   Dl_info info;
@@ -55,8 +54,7 @@ bt(void)
 
 }
 
-EXTERNAL void
-surfman_vmessage(surfman_loglvl level, const char *fmt, va_list ap)
+void surfman_vmessage(surfman_loglvl level, const char *fmt, va_list ap)
 {
   va_list ap2;
   int syslog_lvl = LOG_DEBUG;
@@ -87,15 +85,14 @@ surfman_vmessage(surfman_loglvl level, const char *fmt, va_list ap)
 
   vfprintf(stderr, fmt, ap2);
 
-  if (level == MESSAGE_FATAL)
+  if (level == SURFMAN_FATAL)
     {
       bt();
       abort();
     }
 }
 
-EXTERNAL void
-surfman_message(surfman_loglvl level, const char *fmt, ...)
+void surfman_message(surfman_loglvl level, const char *fmt, ...)
 {
   va_list ap;
 
@@ -104,88 +101,35 @@ surfman_message(surfman_loglvl level, const char *fmt, ...)
   va_end(ap);
 }
 
-EXTERNAL void
-message (int flags, const char *file, const char *function, int line,
-         const char *fmt, ...)
-{
-  char *level = NULL;
-  va_list ap;
-
-  if (flags & MESSAGE_INFO)
-    {
-      level = "Info";
-    }
-  else if (flags & MESSAGE_WARNING)
-    {
-      level = "Warning";
-    }
-  else if (flags & MESSAGE_ERROR)
-    {
-      level = "Error";
-    }
-  else if (flags & MESSAGE_FATAL)
-    {
-      level = "Fatal";
-    }
-
-  fprintf (stderr, "%s:%s:%s:%d:", level, file, function, line);
-
-  va_start (ap, fmt);
-  vfprintf (stderr, fmt, ap);
-  va_end (ap);
-
-  fprintf (stderr, "\n");
-  fflush (stderr);
-
-  if (flags & (MESSAGE_INFO | MESSAGE_WARNING | MESSAGE_ERROR | MESSAGE_FATAL))
-    {
-      syslog (LOG_ERR, "%s:%s:%s:%d:", level, file, function, line);
-
-      va_start (ap, fmt);
-      vsyslog (LOG_ERR, fmt, ap);
-      va_end (ap);
-    }
-
-  if (flags & MESSAGE_FATAL)
-    {
-      dump_backtrace ();
-      abort ();
-    }
-}
-
-EXTERNAL void *
-xcalloc (size_t n, size_t s)
+void *xcalloc (size_t n, size_t s)
 {
   void *ret = calloc (n, s);
   if (!ret)
-    fatal ("calloc failed");
+    surfman_fatal ("calloc failed");
   return ret;
 }
 
-EXTERNAL void *
-xmalloc (size_t s)
+void *xmalloc (size_t s)
 {
   void *ret = malloc (s);
   if (!ret)
-    fatal ("malloc failed");
+    surfman_fatal ("malloc failed");
   return ret;
 }
 
-EXTERNAL void *
-xrealloc (void *p, size_t s)
+void *xrealloc (void *p, size_t s)
 {
   p = realloc (p, s);
   if (!p)
-    fatal ("realloc failed");
+    surfman_fatal ("realloc failed");
   return p;
 }
 
-EXTERNAL char *
-xstrdup (const char *s)
+char *xstrdup (const char *s)
 {
   char *ret = strdup (s);
   if (!ret)
-    fatal ("strdup failed");
+    surfman_fatal ("strdup failed");
   return ret;
 }
 

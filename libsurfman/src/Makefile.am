@@ -16,55 +16,23 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-INCLUDES = ${LIBXC_INC}
+noinst_HEADERS = \
+	project.h \
+	list.h
 
-SRCS = surfman.c util.c backtrace.c xc.c rect.c configfile.c surface.c
-CPROTO = cproto
+include_HEADERS = surfman.h
 
-SURFMANSRCS=${SRCS}
+libsurfman_la_SOURCES = \
+	util.c \
+	xc.c \
+	rect.c \
+	configfile.c \
+	surface.c
 
-noinst_HEADERS = project.h prototypes.h surfman-tail.h ext_prototypes.h
-
-libsurfman_la_SOURCES = ${SURFMANSRCS}
-libsurfman_la_CFLAGS = ${AM_CFLAGS} -W -Wno-unused
 libsurfman_la_LDFLAGS = \
 	-version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE) \
 	-release $(LT_RELEASE) \
 	-export-dynamic
 
-BUILT_SOURCES = surfman.h
-
 lib_LTLIBRARIES = libsurfman.la
 
-include_HEADERS = surfman.h
-AM_CFLAGS = -g
-
-VFD = ${srcdir}/..
-VF = ${shell cat ${VFD}/version-files}
-VFS = ${VF:%=${VFD}/%}
-VCHK = ${shell cat ${VFS} | @MD5SUM@ | @AWK@ '{ print $$1 }' }
-VNUM = ${shell @GREP@ ${VCHK} ${VFD}/version-md5sums | @AWK@ '{ print $$2 }'  }
-VDEF = ${shell echo `cat ${VFD}/version-major`.`cat ${VFD}/version-minor`.`cat ${VFD}/version-micro` }
-
-surfman.h: surfman-head.h ext_prototypes.h surfman-tail.h
-	cat surfman-head.h ext_prototypes.h surfman-tail.h > surfman.h
-
-protos:
-	echo > prototypes.h
-	echo > ext_prototypes.h
-	cat surfman-head.h ext_prototypes.h surfman-tail.h > surfman.h
-	${CPROTO} -e -v -E "${CPP} ${CPPFLAGS} -I." -DINT_PROTOS ${INCLUDES} ${SRCS} > prototypes.tmp
-	mv -f prototypes.tmp prototypes.h
-	${CPROTO} -e -v -E "${CPP} ${CPPFLAGS} -I." -DEXT_PROTOS ${INCLUDES} ${SRCS} > ext_prototypes.h
-	cat surfman-head.h ext_prototypes.h surfman-tail.h > surfman.h
-
-version.h: $(VFD)/version-files $(VFD)/version-major \
-	$(VFD)/version-minor $(VFD)/version-micro \
-	$(VFD)/version-md5sums ${VFS} Makefile
-	if [ .${VNUM} = . ]; then \
-		echo "#define FULL_VERSION \"libsurfman Version ${VDEF} + Edits\"" > version.h; \
-		echo ${VDEF}-E > version-num; \
-	else \
-		echo "#define FULL_VERSION \"libsurfman Version ${VNUM}\"" > version.h; \
-		echo ${VNUM} > version-num; \
-	fi

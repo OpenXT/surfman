@@ -165,4 +165,3 @@ rect_from_dirty_bitmap (uint8_t *dirty,
   return 0;
 }
 
-

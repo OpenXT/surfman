@@ -115,7 +115,7 @@ rpc_init (void)
   fd = dmbus_init (DMBUS_SERVICE_SURFMAN, &service_ops);
   if (fd == -1)
     {
-      fatal ("Failed to initialize dmbus");
+      surfman_fatal ("Failed to initialize dmbus");
       return fd;
     }
 

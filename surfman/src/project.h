@@ -63,6 +63,7 @@
 #include <libdmbus.h>
 #include <edid.h>
 #include <pciaccess.h>
+#include <event.h>
 
 #include "surface.h"
 #include "domain.h"

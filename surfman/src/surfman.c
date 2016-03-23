@@ -82,7 +82,7 @@ int main (int argc, char *argv[])
   if (!dont_detach)
     {
       if (daemon (0, 0))
-        fatal ( "daemon(0,0) failed: %s", strerror (errno));
+        surfman_fatal ( "daemon(0,0) failed: %s", strerror (errno));
     }
 
   surfman_info ("Surfman daemon started with PID %d", getpid ());
@@ -94,7 +94,7 @@ int main (int argc, char *argv[])
 
   if (xenstore_init ())
     {
-      fatal ("xenstore_init() failed, aborting.");
+      surfman_fatal ("xenstore_init() failed, aborting.");
       exit (-1);
     }
   resolution_init ();
@@ -107,7 +107,7 @@ int main (int argc, char *argv[])
 
   if (dbus_init ())
     {
-      fatal ("dbus_init() failed. aborting.");
+      surfman_fatal ("dbus_init() failed. aborting.");
       exit (-1);
     }
 
@@ -115,7 +115,7 @@ int main (int argc, char *argv[])
 
   if (rpc_init ())
     {
-      fatal ("rpc_init() failed. aborting.");
+      surfman_fatal ("rpc_init() failed. aborting.");
       exit (-1);
     }
 

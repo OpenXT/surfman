@@ -105,5 +105,5 @@ lockfile_lock (void)
 
   lockfile_remove_stale (PIDFILE);
   if (lockfile_make (PIDFILE))
-    fatal ("Another instance of surfman seems to be already running.\n");
+    surfman_fatal ("Another instance of surfman seems to be already running.\n");
 }

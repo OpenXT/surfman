@@ -35,11 +35,9 @@ domain_dying (struct domain *d)
 {
   xc_dominfo_t info;
 
-  if (xc_domain_getinfo (xch, d->domid, 1, &info) == 1)
-    {
-      return info.dying;
-    }
-  return 0;
+  if (xc_domid_getinfo (d->domid, &info))
+    return 0;
+  return info.dying;
 }
 
 struct domain *

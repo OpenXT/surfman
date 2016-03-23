@@ -150,9 +150,9 @@ ioemugfx_refresh_surface (struct device *device, struct surface *s)
     surface_refresh(s, NULL);
   else
     {
-      rc = xc_hvm_track_dirty_vram (xch, device->d->domid,
-                                    dev->lfb_addr >> XC_PAGE_SHIFT, len,
-                                    (unsigned long *)dev->dirty_buffer);
+      rc = xc_hvm_get_dirty_vram (device->d->domid,
+                                  dev->lfb_addr, len,
+                                  (void*)dev->dirty_buffer);
       if (!rc)
         surface_refresh (s, dev->dirty_buffer);
       else if (errno == ENODATA)

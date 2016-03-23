@@ -115,12 +115,12 @@ dbus_start_service (void)
   DBusMessage *msg;
 
   if (!connection)
-    fatal ("dbus_start_service() failed. aborting.");
+    surfman_fatal ("dbus_start_service() failed. aborting.");
 
   msg = dbus_message_new_signal ("/", "com.citrix.xenclient.surfman", "start_service");
 
   if (!msg)
-    fatal ("dbus_message_new_signal() failed. aborting.");
+    surfman_fatal ("dbus_message_new_signal() failed. aborting.");
 
   dbus_connection_send(connection, msg, NULL);
   dbus_connection_flush(connection);
@@ -163,7 +163,7 @@ watch_add (DBusWatch * watch, void *data)
   struct event *ev;
 
   if (dbus_watch_get_data (watch))
-    fatal ("DBUS watch already added.");
+    surfman_fatal ("DBUS watch already added.");
 
   if (flags & DBUS_WATCH_READABLE)
     ev_flags |= EV_READ;
@@ -190,7 +190,7 @@ watch_remove (DBusWatch * watch, void *data)
   struct event *ev = dbus_watch_get_data (watch);
 
   if (!ev)
-    fatal ("trying to remove invalid DBUS watch.");
+    surfman_fatal ("trying to remove invalid DBUS watch.");
 
   event_del (ev);
   free (ev);

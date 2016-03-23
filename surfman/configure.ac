@@ -38,6 +38,7 @@ AC_CHECK_HEADERS([fbtap.h], [], AC_MSG_ERROR([fbtap header is missing.]))
 # Required modules.
 PKG_CHECK_MODULES([DBUS],[dbus-1])
 PKG_CHECK_MODULES([PNG], [libpng])
+PKG_CHECK_MODULES([LIBEVENT], [libevent])
 PKG_CHECK_MODULES([LIBSURFMAN], [libsurfman])
 PKG_CHECK_MODULES([LIBXENBACKEND], [libxenbackend])
 PKG_CHECK_MODULES([LIBV4V], [libv4v])

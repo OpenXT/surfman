@@ -24,10 +24,6 @@ extern char *xstrdup(const char *s);
 /* backtrace.c */
 extern void dump_backtrace(void);
 /* xc.c */
-extern xc_interface *xch;
-extern int privcmd_fd;
-extern struct xentoollog_logger xc_logger;
-extern int xc_has_vtd(void);
 extern void xc_init(void);
 extern int xc_domid_exists(int domid);
 extern void *xc_mmap_foreign(void *addr, size_t length, int prot, int domid, xen_pfn_t *pages);
@@ -40,8 +36,3 @@ extern int config_load_file(const char *filename);
 /* surface.c */
 extern void *surface_map(surfman_surface_t *surface);
 extern void surface_unmap(surfman_surface_t *surface);
-extern int surfman_surface_init(surfman_surface_t *surface);
-extern void surfman_surface_cleanup(surfman_surface_t *surface);
-extern void surfman_surface_update_mmap(surfman_surface_t *surface, int fd, size_t off);
-extern void surfman_surface_update_pfn_arr(surfman_surface_t *surface, const xen_pfn_t *pfns);
-extern void surfman_surface_update_pfn_linear(surfman_surface_t *surface, xen_pfn_t base);

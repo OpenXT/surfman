@@ -596,24 +596,24 @@ extern "C"
     } surfman_plugin_t;
 
 /* util.c */
-extern void message(int flags, const char *file, const char *function, int line, const char *fmt, ...);
-/* backtrace.c */
-extern void dump_backtrace(void);
+extern void *xcalloc (size_t n, size_t s);
+extern void *xmalloc (size_t s);
+extern void *xrealloc (void *p, size_t s);
+extern char *xstrdup (const char *s);
 /* xc.c */
-extern xc_interface *xch;
-extern int privcmd_fd;
-extern int xc_has_vtd(void);
-extern void xc_init(void);
-extern int xc_domid_exists(int domid);
-extern void *xc_mmap_foreign(void *addr, size_t length, int prot, int domid, xen_pfn_t *pages);
+void xc_init(void);
+int xc_domid_exists(int domid);
+int xc_domid_getinfo(int domid, xc_dominfo_t *info);
+void *xc_mmap_foreign(void *addr, size_t length, int prot, int domid, xen_pfn_t *pages);
+int xc_hvm_get_dirty_vram(int domid, uint64_t base_pfn, size_t n, unsigned long *db);
 /* configfile.c */
-extern const char *config_get(const char *prefix, const char *key);
-extern const char *config_dump(void);
-extern int config_load_file(const char *filename);
+const char *config_get(const char *prefix, const char *key);
+const char *config_dump(void);
+int config_load_file(const char *filename);
 /* surface.c */
-extern void *surface_map(surfman_surface_t *surface);
-extern xen_pfn_t surface_get_base_gfn(surfman_surface_t * surface);
-extern void surface_unmap(surfman_surface_t *surface);
+void *surface_map(surfman_surface_t *surface);
+xen_pfn_t surface_get_base_gfn(surfman_surface_t * surface);
+void surface_unmap(surfman_surface_t *surface);
 
 #ifdef __cplusplus
 }

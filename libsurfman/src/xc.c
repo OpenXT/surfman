@@ -17,113 +17,14 @@
  */
 #include "project.h"
 
-xc_interface *xch;
-int privcmd_fd = -1;
-
-static void vmessage (xentoollog_logger *logger_in,
-                      xentoollog_level level,
-                      int errnoval,
-                      const char *context,
-                      const char *format,
-                      va_list al)
-{
-  char buff[1024];
-  int sz = 0;
-  char *lvl;
-
-  (void) logger_in;
-  switch (level)
-    {
-    case XTL_DEBUG:
-    case XTL_VERBOSE:
-    case XTL_DETAIL:
-    case XTL_INFO:
-    case XTL_NOTICE:
-      lvl = "Info";
-      break;
-    case XTL_WARN:
-      lvl = "Warning";
-      break;
-    case XTL_ERROR:
-      lvl = "Error";
-      break;
-    case XTL_CRITICAL:
-      lvl = "Fatal";
-      break;
-    default:
-    case XTL_NONE:
-    case XTL_PROGRESS:
-      return;
-    }
-
-#define append(fmt...) sz += snprintf(buff + sz, 1024 - sz, fmt)
-  append ("xenctrl:%s:", lvl);
-  if (context)
-    append ("%s:", context);
-
-  sz += vsnprintf(buff + sz, 1024 - sz, format, al);
-
-  if (errnoval >= 0)
-    append(":errno=%s", strerror(errnoval));
-#undef append
-
-  fprintf(stderr, "%s\n", buff);
-  fflush(stderr);
-  syslog (LOG_ERR, "%s", buff);
-}
-
-static void progress (struct xentoollog_logger *logger_in,
-                      const char *context,
-                      const char *doing_what, int percent,
-                      unsigned long done, unsigned long total)
-{
-    (void) logger_in;
-    (void) context;
-    (void) doing_what;
-    (void) percent;
-    (void) done;
-    (void) total;
-}
-
-static void destroy (struct xentoollog_logger *logger_in)
-{
-    (void) logger_in;
-}
-
-struct xentoollog_logger xc_logger = {
-  .vmessage = vmessage,
-  .progress = progress,
-  .destroy = destroy,
-};
-
-int xc_has_vtd (void)
-{
-  static int has_hvm_directio = -1;
-
-#define MAX_CPU_ID 255
-  if (has_hvm_directio == -1)
-    {
-      xc_physinfo_t info;
-
-      info.max_cpu_id = MAX_CPU_ID;
-      if (xc_physinfo(xch, &info))
-        {
-          surfman_fatal ("xc_physinfo(): %s", strerror(errno));
-          return 0;
-        }
-
-      has_hvm_directio = info.capabilities & XEN_SYSCTL_PHYSCAP_hvm_directio;
-    }
-
-  return !!has_hvm_directio;
-}
-
+static xc_interface *xch;
+static int privcmd_fd = -1;
 
 void xc_init (void)
 {
   if (!xch)
     {
-      xch = xc_interface_open (&xc_logger, &xc_logger, 0);
+      xch = xc_interface_open (NULL, NULL, 0);
       if (!xch)
         surfman_fatal ("Failed to open XC interface");
     }
@@ -143,6 +44,11 @@ int xc_domid_exists (int domid)
 
   rc = xc_domain_getinfo (xch, domid, 1, &info);
   return rc >= 0 ? info.domid == (domid_t)domid : 0;
+}
+
+int xc_domid_getinfo(int domid, xc_dominfo_t *info)
+{
+  return xc_domain_getinfo (xch, domid, 1, info);
 }
 
 void *xc_mmap_foreign(void *addr, size_t length, int prot,
@@ -176,3 +82,8 @@ void *xc_mmap_foreign(void *addr, size_t length, int prot,
   return ret;
 }
 
+int xc_hvm_get_dirty_vram(int domid, uint64_t base_pfn, size_t n,
+                          unsigned long *db)
+{
+  return xc_hvm_track_dirty_vram (xch, domid, base_pfn, n, db);
+}

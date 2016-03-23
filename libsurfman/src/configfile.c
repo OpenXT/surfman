@@ -40,12 +40,7 @@ insert_entry (char *key, char *value)
 {
   struct config_entry *e;
 
-  e = malloc (sizeof (*e));
-  if (e == NULL)
-    {
-      fatal ("malloc failed");
-      exit(ENOMEM);
-    }
+  e = xmalloc (sizeof (*e));
   e->key = key;
   e->value = value;
 

@@ -24,11 +24,13 @@
 # include <stdlib.h>
 # include <stdint.h>
 # include <stdarg.h>
+# include <ctype.h>
 
 # include <inttypes.h>
 # include <limits.h>
 
 # include <errno.h>
+# include <assert.h>
 
 # include <unistd.h>
 # include <fcntl.h>
@@ -50,6 +52,8 @@
 # include <xenctrl.h>
 # include <xen/sys/privcmd.h>
 # include <xen/hvm/ioreq.h>
+
+# include <execinfo.h>
 
 # include <pthread.h>
 

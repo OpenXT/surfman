@@ -15,44 +15,48 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
-#define _GNU_SOURCE
-
 #include "project.h"
-#include <stdarg.h>
-#include <dlfcn.h>
-#include <execinfo.h>
 
-void bt(void)
+void fprint_backtrace(FILE *fstream)
 {
-  void *ba[256];
-  Dl_info info;
-  int i;
+    void *bta[256];
+    char **fnames;
+    int i, n;
 
-  int n = backtrace (ba, sizeof (ba) / sizeof (ba[0]));
-  if (!n)
-    return;
+    n = backtrace (bta, sizeof (bta) / sizeof (bta[0]));
+    fnames = backtrace_symbols (bta, n);
+    if (fnames == NULL)
+      {
+        perror ("backtrace_symbols:");
+        abort ();
+      }
 
+    for (i = 0; i < n; ++i)
+      fprintf (fstream, "%s\n", fnames[i]);
 
-  for (i = 0; i < n; ++i)
-    {
-      syslog (LOG_ERR, "libvgmch %d: %p", i, ba[i]);
-      if (dladdr (ba[i], &info))
-        {
-          char *base, *offset;
-
-          base = info.dli_saddr;
-          offset = ba[i];
-
-          syslog (LOG_ERR, "libvgmch (%s %s+0x%x)", info.dli_fname,
-                  info.dli_sname, (unsigned int) (offset - base));
-
-          syslog (LOG_ERR, "libvgmch backtrace: (%s %s+0x%x)", info.dli_fname,
-                  info.dli_sname, (unsigned int) (offset - base));
-        }
-
-    }
-
+    free (fnames);
 }
+
+void syslog_backtrace(int level)
+{
+    void *bta[256];
+    char **fnames;
+    int i, n;
+
+    n = backtrace (bta, sizeof (bta) / sizeof (bta[0]));
+    fnames = backtrace_symbols (bta, n);
+    if (fnames == NULL)
+      {
+        perror ("backtrace_symbols:");
+        abort ();
+      }
+
+    for (i = 0; i < n; ++i)
+      syslog (level, "%s", fnames[i]);
+
+    free (fnames);
+}
+
 
 void surfman_vmessage(surfman_loglvl level, const char *fmt, va_list ap)
 {
@@ -87,7 +91,8 @@ void surfman_vmessage(surfman_loglvl level, const char *fmt, va_list ap)
 
   if (level == SURFMAN_FATAL)
     {
-      bt();
+      syslog_backtrace(LOG_ERR);
+      fprint_backtrace(stderr);
       abort();
     }
 }

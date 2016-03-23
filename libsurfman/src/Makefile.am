@@ -25,7 +25,6 @@ include_HEADERS = surfman.h
 libsurfman_la_SOURCES = \
 	util.c \
 	xc.c \
-	rect.c \
 	configfile.c \
 	surface.c
 

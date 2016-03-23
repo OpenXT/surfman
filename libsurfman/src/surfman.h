@@ -606,8 +606,6 @@ extern int xc_has_vtd(void);
 extern void xc_init(void);
 extern int xc_domid_exists(int domid);
 extern void *xc_mmap_foreign(void *addr, size_t length, int prot, int domid, xen_pfn_t *pages);
-/* rect.c */
-extern int rect_from_dirty_bitmap(uint8_t *dirty, unsigned int width, unsigned int height, unsigned int stride, enum surfman_surface_format format, surfman_rect_t *rect);
 /* configfile.c */
 extern const char *config_get(const char *prefix, const char *key);
 extern const char *config_dump(void);

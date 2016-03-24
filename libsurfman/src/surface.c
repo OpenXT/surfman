@@ -55,6 +55,29 @@ struct surface_priv
   size_t len;
 };
 
+static void surface_update_mfn_list (surfman_surface_t * surface)
+{
+  struct surface_priv *p = PRIV(surface);
+  xen_pfn_t *pfns;
+  int rc;
+  int domid = surface->pages_domid;
+  size_t i, n = surface->page_count;
+
+  /* p2m translation is only performed for lfb given by qemu,
+   * so PFN_LINEAR or abort. */
+  assert(p->type == TYPE_PFN_LINEAR);
+
+  pfns = xcalloc(n, sizeof (xen_pfn_t));
+  for (i = 0; i < n; ++i)
+    pfns[i] = p->u.pfn_linear.base + i;
+
+  if (xc_translate_gpfn_to_mfn (domid, n, pfns, surface->mfns))
+    surfman_error ("Failed to translate pfns for dom%d (base:%#lx).",
+                   domid, p->u.pfn_linear.base);
+
+  free(pfns);
+}
+
 static void update_mapping (struct surface_priv *p, size_t len)
 {
   size_t npages = (len + XC_PAGE_SIZE - 1) / XC_PAGE_SIZE;
@@ -210,6 +233,7 @@ void surfman_surface_update_pfn_linear (surfman_surface_t * surface, xen_pfn_t b
   p->u.pfn_linear.base = base;
   if (p->baseptr)
     update_mapping (p, surface->page_count * XC_PAGE_SIZE);
+  surface_update_mfn_list(surface);
   pthread_mutex_unlock (&p->lock);
 }
 

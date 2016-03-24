@@ -82,6 +82,30 @@ void *xc_mmap_foreign(void *addr, size_t length, int prot,
   return ret;
 }
 
+int xc_translate_gpfn_to_mfn (int domid, size_t pfn_count,
+			      xen_pfn_t *pfns, pfn_t *mfns)
+{
+  int rc = 0;
+
+  assert(xch != NULL);
+  assert(pfns != NULL);
+  assert(mfns != NULL);
+
+  /* This will try to pin the pfns, but the device model should take care of
+   * that really and this should only check for pfns to be pinned or fail
+   * otherwise. */
+  rc = xc_domain_memory_translate_gpfn_list (xch, domid, pfn_count,
+                                             pfns, mfns);
+  if (rc)
+    surfman_error ("xc_domain_memory_translate_gpfn_list failed (%s).",
+                   strerror (errno));
+  /* Since this is done a bit early for QEMU, it will later try to pin the pfns
+   * and fail (because they are pinned by us). So unpin them immediately... */
+  xc_domain_memory_release_mfn_list(xch, domid, pfn_count, mfns);
+
+  return rc;
+}
+
 int xc_hvm_get_dirty_vram(int domid, uint64_t base_pfn, size_t n,
                           unsigned long *db)
 {

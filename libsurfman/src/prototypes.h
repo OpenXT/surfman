@@ -27,6 +27,7 @@ extern void dump_backtrace(void);
 extern void xc_init(void);
 extern int xc_domid_exists(int domid);
 extern void *xc_mmap_foreign(void *addr, size_t length, int prot, int domid, xen_pfn_t *pages);
+int xc_translate_gpfn_to_mfn (int domid, size_t pfn_count, xen_pfn_t *pfns, pfn_t *mfns);
 /* rect.c */
 extern int rect_from_dirty_bitmap(uint8_t *dirty, unsigned int width, unsigned int height, unsigned int stride, enum surfman_surface_format format, surfman_rect_t *rect);
 /* configfile.c */

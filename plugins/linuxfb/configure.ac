@@ -63,7 +63,6 @@ AC_C_CONST
 
 # Required modules.
 PKG_CHECK_MODULES([LIBSURFMAN], [libsurfman])
-PKG_CHECK_MODULES([LIBPCIACCESS], [pciaccess])
 
 AC_OUTPUT([Makefile
 	  ])

@@ -16,31 +16,30 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#define _GNU_SOURCE
 #include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+
+#include <errno.h>
+#include <assert.h>
 
 #include <unistd.h>
+#include <fcntl.h>
+
+#include <string.h>
+
+#include <math.h>
+
 #include <sys/types.h>
 #include <sys/mman.h>
 #include <sys/time.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
-#include <math.h>
+#include <sys/stat.h>
+#include <sys/wait.h>
+
 #include <xenctrl.h>
 #include <surfman.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <errno.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <assert.h>
-
-#include <pciaccess.h>
 
 #include "linuxfb.h"
-#include "../../surfman/src/splashscreen.h"
-/* TODO: check whether we want to properly install the header instead...*/
 
 #ifndef MIN
 # define MIN(_x_, _y_) ((_x_) < (_y_) ? (_x_) : (_y_))
@@ -50,7 +49,6 @@
 #endif
 
 static int g_monitor = 1;
-static xc_interface *g_xc = 0;
 static surfman_psurface_t g_fb_pages_taken = NULL;
 
 static struct
@@ -74,8 +72,6 @@ static struct
     uint8_t     *map;
 
     int         fb_need_cleanning;
-
-    struct pci_device *pci_dev;
 }               g_fb_info;
 
 static int sysfs_read(const char *node, const char *format, ...)
@@ -180,14 +176,6 @@ static int map_fb(surfman_surface_t *src, fb_surface *dst)
 
 static int fb_init(surfman_plugin_t * p)
 {
-    g_xc = xc_interface_open(NULL, NULL, 0);
-    if (g_xc == 0) {
-        surfman_error("failed to open XC interface");
-        return SURFMAN_ERROR;
-    }
-
-    pci_system_init();
-
     if (fb_read_info() != 0) {
         surfman_error("reading fb info failed");
         return SURFMAN_ERROR;
@@ -203,8 +191,7 @@ static int fb_init(surfman_plugin_t * p)
 
 static void fb_shutdown(surfman_plugin_t * p)
 {
-    xc_interface_close(g_xc);
-    g_xc = 0;
+    (void)p;
 }
 
 static void fb_clean_hostfb(void)

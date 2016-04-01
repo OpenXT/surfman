@@ -17,129 +17,27 @@
  */
 #include "project.h"
 
-xc_interface *xch;
-int privcmd_fd = -1;
+static xc_interface *xch;
+static int privcmd_fd = -1;
 
-static void vmessage (xentoollog_logger *logger_in,
-                      xentoollog_level level,
-                      int errnoval,
-                      const char *context,
-                      const char *format,
-                      va_list al)
-{
-  char buff[1024];
-  int sz = 0;
-  char *lvl;
-
-  (void) logger_in;
-  switch (level)
-    {
-    case XTL_DEBUG:
-    case XTL_VERBOSE:
-    case XTL_DETAIL:
-    case XTL_INFO:
-    case XTL_NOTICE:
-      lvl = "Info";
-      break;
-    case XTL_WARN:
-      lvl = "Warning";
-      break;
-    case XTL_ERROR:
-      lvl = "Error";
-      break;
-    case XTL_CRITICAL:
-      lvl = "Fatal";
-      break;
-    default:
-    case XTL_NONE:
-    case XTL_PROGRESS:
-      return;
-    }
-
-#define append(fmt...) sz += snprintf(buff + sz, 1024 - sz, fmt)
-  append ("xenctrl:%s:", lvl);
-  if (context)
-    append ("%s:", context);
-
-  sz += vsnprintf(buff + sz, 1024 - sz, format, al);
-
-  if (errnoval >= 0)
-    append(":errno=%s", strerror(errnoval));
-#undef append
-
-  fprintf(stderr, "%s\n", buff);
-  fflush(stderr);
-  syslog (LOG_ERR, "%s", buff);
-}
-
-static void progress (struct xentoollog_logger *logger_in,
-                      const char *context,
-                      const char *doing_what, int percent,
-                      unsigned long done, unsigned long total)
-{
-    (void) logger_in;
-    (void) context;
-    (void) doing_what;
-    (void) percent;
-    (void) done;
-    (void) total;
-}
-
-static void destroy (struct xentoollog_logger *logger_in)
-{
-    (void) logger_in;
-}
-
-INTERNAL struct xentoollog_logger xc_logger = {
-  .vmessage = vmessage,
-  .progress = progress,
-  .destroy = destroy,
-};
-
-EXTERNAL int
-xc_has_vtd (void)
-{
-  static int has_hvm_directio = -1;
-
-#define MAX_CPU_ID 255
-  if (has_hvm_directio == -1)
-    {
-      xc_physinfo_t info;
-
-      info.max_cpu_id = MAX_CPU_ID;
-      if (xc_physinfo(xch, &info))
-        {
-          fatal ("xc_physinfo(): %s", strerror(errno));
-          return 0;
-        }
-
-      has_hvm_directio = info.capabilities & XEN_SYSCTL_PHYSCAP_hvm_directio;
-    }
-
-  return !!has_hvm_directio;
-}
-
-
-EXTERNAL void
-xc_init (void)
+void xc_init (void)
 {
   if (!xch)
     {
-      xch = xc_interface_open (&xc_logger, &xc_logger, 0);
+      xch = xc_interface_open (NULL, NULL, 0);
       if (!xch)
-        fatal ("Failed to open XC interface");
+        surfman_fatal ("Failed to open XC interface");
     }
 
   if (privcmd_fd == -1)
     {
       privcmd_fd = open ("/proc/xen/privcmd", O_RDWR);
       if (privcmd_fd < 0)
-        fatal ("Failed to open privcmd");
+        surfman_fatal ("Failed to open privcmd");
     }
 }
 
-EXTERNAL int
-xc_domid_exists (int domid)
+int xc_domid_exists (int domid)
 {
   xc_dominfo_t info;
   int rc;
@@ -148,8 +46,13 @@ xc_domid_exists (int domid)
   return rc >= 0 ? info.domid == (domid_t)domid : 0;
 }
 
-EXTERNAL void *xc_mmap_foreign(void *addr, size_t length, int prot,
-                               int domid, xen_pfn_t *pages)
+int xc_domid_getinfo(int domid, xc_dominfo_t *info)
+{
+  return xc_domain_getinfo (xch, domid, 1, info);
+}
+
+void *xc_mmap_foreign(void *addr, size_t length, int prot,
+                      int domid, xen_pfn_t *pages)
 {
   void *ret;
   int rc;
@@ -179,4 +82,32 @@ EXTERNAL void *xc_mmap_foreign(void *addr, size_t length, int prot,
   return ret;
 }
 
+int xc_translate_gpfn_to_mfn (int domid, size_t pfn_count,
+			      xen_pfn_t *pfns, pfn_t *mfns)
+{
+  int rc = 0;
 
+  assert(xch != NULL);
+  assert(pfns != NULL);
+  assert(mfns != NULL);
+
+  /* This will try to pin the pfns, but the device model should take care of
+   * that really and this should only check for pfns to be pinned or fail
+   * otherwise. */
+  rc = xc_domain_memory_translate_gpfn_list (xch, domid, pfn_count,
+                                             pfns, mfns);
+  if (rc)
+    surfman_error ("xc_domain_memory_translate_gpfn_list failed (%s).",
+                   strerror (errno));
+  /* Since this is done a bit early for QEMU, it will later try to pin the pfns
+   * and fail (because they are pinned by us). So unpin them immediately... */
+  xc_domain_memory_release_mfn_list(xch, domid, pfn_count, mfns);
+
+  return rc;
+}
+
+int xc_hvm_get_dirty_vram(int domid, uint64_t base_pfn, size_t n,
+                          unsigned long *db)
+{
+  return xc_hvm_track_dirty_vram (xch, domid, base_pfn, n, db);
+}

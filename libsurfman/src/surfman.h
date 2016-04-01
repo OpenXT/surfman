@@ -1,18 +1,18 @@
-/*  
+/*
  * Copyright (c) 2012, Citrix Systems
  *
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
- * 
+ *
  * Redistributions of source code must retain the above copyright notice,
  * this list of conditions and the following disclaimer.
- * 
+ *
  * Redistributions in binary form must reproduce the above copyright
  * notice, this list of conditions and the following disclaimer in the
  * documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
@@ -27,22 +27,8 @@
  *
  */
 
-/*
- * Citrix XenClient Surface Manager plugin API
- *
- * Copyright Citrix Systems, Inc.
- * 
- * Julian Pidancet <julian.pidancet@citrix.com>
- * Jean Guyader <jean.guyader@citrix.com>
- * James McKenzie <james.mckenzie@citrix.com>
- */
-
 #ifndef __SURFMAN_H__
 # define __SURFMAN_H__
-
-/* Necessary for event handling */
-#include <event.h>
-#include <stdarg.h>
 
 # ifdef __cplusplus
 extern "C"
@@ -65,7 +51,7 @@ extern "C"
     } surfman_loglvl;
 
     void surfman_message(surfman_loglvl level, const char *fmt, ...) __attribute__ ((format (printf, 2, 3)));
-    void surfman_vmessage(surfman_loglvl levl, const char *fmt, va_list ap);
+    void surfman_vmessage(surfman_loglvl level, const char *fmt, va_list ap);
 # define __log(level, level_string, fmt, ...) \
     surfman_message(level, "%s:%s:%s:%d: " fmt "\n", level_string, __FILE__, __PRETTY_FUNCTION__, __LINE__, ## __VA_ARGS__)
 
@@ -74,20 +60,6 @@ extern "C"
 # define surfman_warning(fmt, ...) __log(SURFMAN_WARNING, "Warning", fmt, ## __VA_ARGS__)
 # define surfman_error(fmt, ...) __log(SURFMAN_ERROR, "Error", fmt, ## __VA_ARGS__)
 # define surfman_fatal(fmt, ...) __log(SURFMAN_FATAL, "Fatal", fmt, ## __VA_ARGS__)
-
-    /*
-    ** DEPRECATED. Utils and debug tools.
-    ** Please ignore and carry on.
-    */
-# define MESSAGE_INFO    (1UL <<  0)
-# define MESSAGE_WARNING (1UL <<  1)
-# define MESSAGE_ERROR   (1UL <<  2)
-# define MESSAGE_FATAL   (1UL <<  3)
-
-# define info(a...) message(MESSAGE_INFO,__FILE__,__PRETTY_FUNCTION__,__LINE__,a)
-# define warning(a...) message(MESSAGE_WARNING,__FILE__,__PRETTY_FUNCTION__,__LINE__,a)
-# define error(a...) message(MESSAGE_ERROR,__FILE__,__PRETTY_FUNCTION__,__LINE__,a)
-# define fatal(a...) message(MESSAGE_FATAL,__FILE__,__PRETTY_FUNCTION__,__LINE__,a)
 
     /*
     ** Version define
@@ -110,7 +82,7 @@ extern "C"
     ** Surfman will retrieve this variable to know which API is currently
     ** used by the plugin.
     */
-# define SURFMAN_API_VERSION SURFMAN_VERSION(@LIBSURFMAN_MAJOR_VERSION@, @LIBSURFMAN_MINOR_VERSION@, @LIBSURFMAN_MICRO_VERSION@)
+# define SURFMAN_API_VERSION SURFMAN_VERSION(2, 1, 2)
 
     /*
     ** Type used for storing Page Frame Numbers.
@@ -622,3 +594,29 @@ extern "C"
         void                        (*dpms_off)(struct surfman_plugin *plugin);
 
     } surfman_plugin_t;
+
+/* util.c */
+extern void *xcalloc (size_t n, size_t s);
+extern void *xmalloc (size_t s);
+extern void *xrealloc (void *p, size_t s);
+extern char *xstrdup (const char *s);
+/* xc.c */
+void xc_init(void);
+int xc_domid_exists(int domid);
+int xc_domid_getinfo(int domid, xc_dominfo_t *info);
+void *xc_mmap_foreign(void *addr, size_t length, int prot, int domid, xen_pfn_t *pages);
+int xc_hvm_get_dirty_vram(int domid, uint64_t base_pfn, size_t n, unsigned long *db);
+/* configfile.c */
+const char *config_get(const char *prefix, const char *key);
+const char *config_dump(void);
+int config_load_file(const char *filename);
+/* surface.c */
+void *surface_map(surfman_surface_t *surface);
+xen_pfn_t surface_get_base_gfn(surfman_surface_t * surface);
+void surface_unmap(surfman_surface_t *surface);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* __SURFMAN_H__ */

@@ -16,33 +16,54 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-AC_INIT([linuxfb], [0.1])
-AC_CONFIG_SRCDIR([linuxfb.c])
-AM_INIT_AUTOMAKE
+AC_INIT(linuxfb, 0.1)
+AC_PREREQ(2.13)
+AC_CONFIG_HEADERS(config.h)
+AC_CONFIG_SRCDIR(linuxfb.c)
+AM_INIT_AUTOMAKE([foreign -Wall -Werror])
 
-AC_CONFIG_MACRO_DIR([m4])
-AM_PROG_LIBTOOL
+#
+# Version management.
+# +1    : 0     Interface changes breaking retro-compatibility.
+# 0     : +1    Internal changes without lost of retro-compatibility.
+#
+VERSION_MAJOR=0
+VERSION_MINOR=1
+AC_DEFINE_UNQUOTED([VERSION_MAJOR], [$VERSION_MAJOR], [libsurfman major version number])
+AC_DEFINE_UNQUOTED([VERSION_MINOR], [$VERSION_MINOR], [libsurfman minor version number])
 
+#
+# Standard checks.
+#
 AC_PROG_CC
 AC_PROG_CPP
 AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_MAKE_SET
-AC_PROG_AWK
-AC_CHECK_PROG(MD5SUM,md5sum,md5sum)
-AC_CHECK_PROG(GREP,grep,grep)
+AC_PROG_RANLIB
+AM_PROG_AR
 
-AC_SYS_LARGEFILE
+#
+# Libtool version system.
+#
+LT_CURRENT=$VERSION_MAJOR
+LT_REVISION=1
+LT_AGE=$VERSION_MAJOR
+LT_RELEASE=$VERSION_MAJOR.$VERSION_MINOR
+AC_SUBST(LT_CURRENT)
+AC_SUBST(LT_REVISION)
+AC_SUBST(LT_AGE)
+AC_SUBST(LT_RELEASE)
 
-AC_CONFIG_HEADERS([config.h])
+LT_INIT
 
+# Compiler capabilities.
+AC_C_INLINE
+AC_C_CONST
+
+# Required modules.
 PKG_CHECK_MODULES([LIBSURFMAN], [libsurfman])
-LIBSURFMAN_INC="$LIBSURFMAN_CFLAGS"
-LIBSURFMAN_LIB="$LIBSURFMAN_LIBS"
 
-AC_SUBST(LIBSURFMAN_INC)
-AC_SUBST(LIBSURFMAN_LIB)
-
-AC_CONFIG_FILES([Makefile])
-AC_OUTPUT
+AC_OUTPUT([Makefile
+	  ])
 

@@ -47,8 +47,7 @@ insert_entry (char *key, char *value)
   LIST_INSERT_HEAD (&config_entry_list, e, link);
 }
 
-EXTERNAL const char *
-config_get (const char *prefix, const char *key)
+const char *config_get (const char *prefix, const char *key)
 {
   const char *v = NULL;
   struct config_entry *e;
@@ -74,8 +73,7 @@ config_get (const char *prefix, const char *key)
   return v;
 }
 
-EXTERNAL const char *
-config_dump (void)
+const char *config_dump (void)
 {
   struct config_entry *e;
 
@@ -89,8 +87,7 @@ config_dump (void)
   surfman_info ("=== END OF DUMP ===");
 }
 
-EXTERNAL int
-config_load_file (const char *filename)
+int config_load_file (const char *filename)
 {
   FILE *f;
   char *line = NULL;

@@ -349,34 +349,14 @@ surface_update_lfb (struct surface *s,
   size_t i;
   size_t npages = (len + (XC_PAGE_SIZE - 1)) >> XC_PAGE_SHIFT;
 
-  x = calloc (npages, sizeof (xen_pfn_t));
-  if (!x)
-    return;
-
-  for (i = 0; i < npages; i++)
-    x[i] = (lfb >> XC_PAGE_SHIFT) + i;
-
   if (s->surface->page_count != npages)
     s->surface = realloc (s->surface, sizeof (surfman_surface_t) +
                           npages * sizeof (pfn_t));
-  if (!s->surface)
-    goto fail;
-
 
   s->surface->page_count = npages;
   s->surface->pages_domid = domid;
 
   surfman_surface_update_pfn_linear (s->surface, lfb >> XC_PAGE_SHIFT);
-
-  rc = xc_domain_memory_translate_gpfn_list (xch, domid, npages, x,
-                                             s->surface->mfns);
-  if (rc)
-    {
-      surfman_error ("failed to translate pfns");
-      goto fail;
-    }
-  xc_domain_memory_release_mfn_list(xch, domid, npages,
-                                    s->surface->mfns);
 
   // XXX: We release mfns before passing them as we don't need the page_info
   // reference anymore.  The device-model is supposed to have a reference on

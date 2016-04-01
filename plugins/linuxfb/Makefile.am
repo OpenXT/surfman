@@ -16,20 +16,9 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-CPROTO = cproto
-INCLUDES = ${LIBXCIDC_INC} ${LIBSURFMAN_INC} ${GL_CFLAGS}
-AM_CFLAGS=-g -W -Wall -Wno-unused -Werror
-
 plugindir = ${libdir}/surfman
 plugin_LTLIBRARIES = linuxfb.la
 
-SRCS = linuxfb.c 
+linuxfb_la_SOURCES = linuxfb.c
+linuxfb_la_LDFLAGS = -module
 
-linuxfb_la_SOURCES = ${SRCS}
-linuxfb_la_LIBADD =  ${LIBXCIDC_LIB} ${LIBSURFMAN_LIB} ${GL_LIBS}
-linuxfb_la_LDFLAGS = -module -lpciaccess
-
-protos:
-	echo > prototypes.h
-	${CPROTO} -v -e -E "${CPP} ${CPPFLAGS}" -DPROTOS -v ${INCLUDES} ${SRCS} > prototypes.tmp
-	mv -f prototypes.tmp prototypes.h

@@ -16,31 +16,30 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#define _GNU_SOURCE
 #include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+
+#include <errno.h>
+#include <assert.h>
 
 #include <unistd.h>
+#include <fcntl.h>
+
+#include <string.h>
+
+#include <math.h>
+
 #include <sys/types.h>
 #include <sys/mman.h>
 #include <sys/time.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
-#include <math.h>
+#include <sys/stat.h>
+#include <sys/wait.h>
+
 #include <xenctrl.h>
 #include <surfman.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <errno.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <assert.h>
-
-#include <pciaccess.h>
 
 #include "linuxfb.h"
-#include "../../surfman/src/splashscreen.h"
-/* TODO: check whether we want to properly install the header instead...*/
 
 #ifndef MIN
 # define MIN(_x_, _y_) ((_x_) < (_y_) ? (_x_) : (_y_))
@@ -50,7 +49,6 @@
 #endif
 
 static int g_monitor = 1;
-static xc_interface *g_xc = 0;
 static surfman_psurface_t g_fb_pages_taken = NULL;
 
 static struct
@@ -74,8 +72,6 @@ static struct
     uint8_t     *map;
 
     int         fb_need_cleanning;
-
-    struct pci_device *pci_dev;
 }               g_fb_info;
 
 static int sysfs_read(const char *node, const char *format, ...)
@@ -129,17 +125,17 @@ static int fb_read_info(void)
 
     if (!(g_fb_info.fd_dev = open("/dev/fb0", O_RDWR)))
     {
-        error ("opening /dev/fb0 failed!");
+        surfman_error ("opening /dev/fb0 failed!");
         return -1;
     }
 
     g_fb_info.mapPhys = get_fb_base();
 
-    info("Vesa info");
-    info("    maxBytesPerScanline: %x", g_fb_info.maxBytesPerScanline);
-    info("    X: %d, Y:%d, Bpp: %u", g_fb_info.x, g_fb_info.y, g_fb_info.Bpp);
-    info("    mapSize: %x", g_fb_info.mapSize);
-    info("    mapPhys: %x", g_fb_info.mapPhys);
+    surfman_info("Vesa info");
+    surfman_info("    maxBytesPerScanline: %x", g_fb_info.maxBytesPerScanline);
+    surfman_info("    X: %d, Y:%d, Bpp: %u", g_fb_info.x, g_fb_info.y, g_fb_info.Bpp);
+    surfman_info("    mapSize: %x", g_fb_info.mapSize);
+    surfman_info("    mapPhys: %x", g_fb_info.mapPhys);
     return 0;
 }
 
@@ -171,7 +167,7 @@ static int map_fb(surfman_surface_t *src, fb_surface *dst)
 
     if (!dst->mapped_fb)
       {
-        error ("failed to map framebuffer: %s", strerror (errno));
+        surfman_error ("failed to map framebuffer: %s", strerror (errno));
         return -1;
       }
 
@@ -180,21 +176,13 @@ static int map_fb(surfman_surface_t *src, fb_surface *dst)
 
 static int fb_init(surfman_plugin_t * p)
 {
-    g_xc = xc_interface_open(NULL, NULL, 0);
-    if (g_xc == 0) {
-        error("failed to open XC interface");
-        return SURFMAN_ERROR;
-    }
-
-    pci_system_init();
-
     if (fb_read_info() != 0) {
-        error("reading fb info failed");
+        surfman_error("reading fb info failed");
         return SURFMAN_ERROR;
     }
 
     if (fb_remap_host_fb() != 0) {
-        error("mapping fb lfb failed");
+        surfman_error("mapping fb lfb failed");
         return SURFMAN_ERROR;
     }
 
@@ -203,8 +191,7 @@ static int fb_init(surfman_plugin_t * p)
 
 static void fb_shutdown(surfman_plugin_t * p)
 {
-    xc_interface_close(g_xc);
-    g_xc = 0;
+    (void)p;
 }
 
 static void fb_clean_hostfb(void)
@@ -308,7 +295,7 @@ static void fb_update_psurface(surfman_plugin_t *plugin, surfman_psurface_t psur
     switch (surface->format) {
         case SURFMAN_FORMAT_UNKNOWN:        /* NOTE: We don't deal with those (yet ?) */
         case SURFMAN_FORMAT_BGR565:
-            error("Surfman is using an unsuported format. Shit's thrown in the fan from now.");
+            surfman_error("Surfman is using an unsuported format. Shit's thrown in the fan from now.");
             return;
 
         case SURFMAN_FORMAT_RGBX8888:
@@ -330,7 +317,7 @@ static void fb_dump_refresh_bitmap(uint8_t *refresh_bitmap, unsigned int size)
     if (refresh_bitmap)
         for (i = 0; i < DIV_ROUND_UP(DIV_ROUND_UP(size, XC_PAGE_SIZE), 8); i++)
             asprintf(&tmp, "%s%02x", tmp ? tmp : "", refresh_bitmap[i]);
-    info("%s: %s", __func__, tmp);
+   surfman_info("%s: %s", __func__, tmp);
 }
 
 /* Sick arithmetic ... Most variables are just aliases to make it "readable". */

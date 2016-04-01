@@ -20,107 +20,44 @@
 
 # include "config.h"
 
-# ifdef HAVE_DLFCN_H
-#  include <dlfcn.h>
-# endif
+# include <stdio.h>
+# include <stdlib.h>
+# include <stdint.h>
+# include <stdarg.h>
+# include <ctype.h>
 
-# ifdef HAVE_ERRNO_H
-#  include <errno.h>
-# endif
-
-# ifdef HAVE_FCNTL_H
-#  include <fcntl.h>
-# endif
-
-# ifdef HAVE_INTTYPES_H
-#  include <inttypes.h>
-# endif
-
-# ifdef HAVE_MEMORY_H
-#  include <memory.h>
-# endif
-
-# ifdef HAVE_STDINT_H
-#  include <stdint.h>
-# endif
-
-# ifdef HAVE_STDIO_H
-#  include <stdio.h>
-# endif
-
-# ifdef HAVE_STDLIB_H
-#  include <stdlib.h>
-# endif
-
-# ifdef HAVE_STRINGS_H
-#  include <strings.h>
-# endif
-
-# ifdef HAVE_STRING_H
-#  include <string.h>
-# endif
-
-# ifdef HAVE_STROPTS_H
-#  include <stropts.h>
-# endif
-
-# ifdef HAVE_SYSLOG_H
-#  include <syslog.h>
-# endif
-
-# ifdef HAVE_SYS_MMAN_H
-#  include <sys/mman.h>
-# endif
-
-# ifdef HAVE_SYS_STAT_H
-#  include <sys/stat.h>
-# endif
-
-# ifdef HAVE_SYS_TYPES_H
-#  include <sys/types.h>
-# endif
-
-# ifdef HAVE_UNISTD_H
-#  include <unistd.h>
-# endif
-
-# ifdef HAVE_PTHREAD_H
-#  include <pthread.h>
-# endif
-
-# ifdef HAVE_STDARG_H
-#  include <stdarg.h>
-# endif
-
-# ifdef HAVE_CTYPE_H
-#  include <ctype.h>
-# endif
-
-# ifdef INT_PROTOS
-#  define INTERNAL
-#  define EXTERNAL
-# else
-#  ifdef EXT_PROTOS
-#   define INTERNAL static
-#   define EXTERNAL
-#  else
-#   define INTERNAL
-#   define EXTERNAL
-#  endif
-# endif
-
+# include <inttypes.h>
 # include <limits.h>
+
+# include <errno.h>
+# include <assert.h>
+
+# include <unistd.h>
+# include <fcntl.h>
+
+# include <dlfcn.h>
+
+# include <memory.h>
+
+# include <strings.h>
+# include <string.h>
+
+# include <syslog.h>
+
+# include <sys/mman.h>
+# include <sys/stat.h>
+# include <sys/types.h>
 # include <sys/ioctl.h>
+
 # include <xenctrl.h>
 # include <xen/sys/privcmd.h>
 # include <xen/hvm/ioreq.h>
 
-# ifdef TIME_WITH_SYS_TIME
-#  include <sys/time.h>
-# endif
+# include <execinfo.h>
+
+# include <pthread.h>
 
 # include "list.h"
-
 # include "surfman.h"
 
 # include "prototypes.h"

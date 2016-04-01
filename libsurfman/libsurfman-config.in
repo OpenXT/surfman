@@ -70,8 +70,8 @@ if test "$echo_exec_prefix" = "yes"; then
         echo $exec_prefix
 fi
 if test "$echo_cflags" = "yes"; then
-        echo $includes @LIBEVENT_INC@
+        echo $includes
 fi
 if test "$echo_libs" = "yes"; then
-        echo -L@libdir@ -lsurfman @LIBXC_LIB@ @PTHREAD_LIB@ @LIBEVENT_LIB@
+        echo -L@libdir@ -lsurfman @LIBS@
 fi

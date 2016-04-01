@@ -242,7 +242,7 @@ bool vxenstore_chmod (const char *perms, unsigned int nbperm,
     if (!xs_strings_to_perms (p, nbperm, perms))
         goto xs_chmod_err;
 
-    if (!vasprintf (&buff, format, arg) == -1)
+    if (vasprintf (&buff, format, arg) == -1)
         goto xs_chmod_err;
 
     ret = xs_set_permissions (xs, xs_transaction, buff, p, nbperm);

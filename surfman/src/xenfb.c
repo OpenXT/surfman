@@ -581,7 +581,7 @@ xenfb_backend_init (int dom0)
 
   rc = backend_init (dom0);
   if (rc)
-    fatal ("Failed to initialize libxenbackend");
+    surfman_fatal ("Failed to initialize libxenbackend");
 
   event_set (&backend_xenstore_event,
              backend_xenstore_fd (),

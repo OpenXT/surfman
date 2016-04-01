@@ -55,6 +55,29 @@ struct surface_priv
   size_t len;
 };
 
+static void surface_update_mfn_list (surfman_surface_t * surface)
+{
+  struct surface_priv *p = PRIV(surface);
+  xen_pfn_t *pfns;
+  int rc;
+  int domid = surface->pages_domid;
+  size_t i, n = surface->page_count;
+
+  /* p2m translation is only performed for lfb given by qemu,
+   * so PFN_LINEAR or abort. */
+  assert(p->type == TYPE_PFN_LINEAR);
+
+  pfns = xcalloc(n, sizeof (xen_pfn_t));
+  for (i = 0; i < n; ++i)
+    pfns[i] = p->u.pfn_linear.base + i;
+
+  if (xc_translate_gpfn_to_mfn (domid, n, pfns, surface->mfns))
+    surfman_error ("Failed to translate pfns for dom%d (base:%#lx).",
+                   domid, p->u.pfn_linear.base);
+
+  free(pfns);
+}
+
 static void update_mapping (struct surface_priv *p, size_t len)
 {
   size_t npages = (len + XC_PAGE_SIZE - 1) / XC_PAGE_SIZE;
@@ -112,8 +135,7 @@ static void update_mapping (struct surface_priv *p, size_t len)
   p->len = len;
 }
 
-EXTERNAL void *
-surface_map (surfman_surface_t * surface)
+void *surface_map (surfman_surface_t * surface)
 {
   struct surface_priv *p = PRIV(surface);
 
@@ -125,8 +147,7 @@ surface_map (surfman_surface_t * surface)
   return p->baseptr;
 }
 
-EXTERNAL xen_pfn_t
-surface_get_base_gfn(surfman_surface_t * surface)
+xen_pfn_t surface_get_base_gfn(surfman_surface_t * surface)
 {
   struct surface_priv *p = PRIV(surface);
 
@@ -135,8 +156,7 @@ surface_get_base_gfn(surfman_surface_t * surface)
   return p->u.pfn_linear.base;
 }
 
-EXTERNAL void
-surface_unmap (surfman_surface_t * surface)
+void surface_unmap (surfman_surface_t * surface)
 {
   struct surface_priv *p = PRIV(surface);
 
@@ -152,8 +172,7 @@ surface_unmap (surfman_surface_t * surface)
 /*
  * Export these only to surfman and not the plugins
  */
-INTERNAL int
-surfman_surface_init (surfman_surface_t * surface)
+int surfman_surface_init (surfman_surface_t * surface)
 {
   struct surface_priv *p;
 
@@ -169,8 +188,7 @@ surfman_surface_init (surfman_surface_t * surface)
   return 0;
 }
 
-INTERNAL void
-surfman_surface_cleanup (surfman_surface_t * surface)
+void surfman_surface_cleanup (surfman_surface_t * surface)
 {
   struct surface_priv *p = PRIV(surface);
 
@@ -178,8 +196,7 @@ surfman_surface_cleanup (surfman_surface_t * surface)
   free (p);
 }
 
-INTERNAL void
-surfman_surface_update_mmap (surfman_surface_t * surface, int fd, size_t off)
+void surfman_surface_update_mmap (surfman_surface_t * surface, int fd, size_t off)
 {
   struct surface_priv *p = PRIV(surface);
 
@@ -192,8 +209,7 @@ surfman_surface_update_mmap (surfman_surface_t * surface, int fd, size_t off)
   pthread_mutex_unlock (&p->lock);
 }
 
-INTERNAL void
-surfman_surface_update_pfn_arr (surfman_surface_t * surface,
+void surfman_surface_update_pfn_arr (surfman_surface_t * surface,
                                 const xen_pfn_t * pfns)
 {
   struct surface_priv *p = PRIV(surface);
@@ -207,8 +223,7 @@ surfman_surface_update_pfn_arr (surfman_surface_t * surface,
   pthread_mutex_unlock (&p->lock);
 }
 
-INTERNAL void
-surfman_surface_update_pfn_linear (surfman_surface_t * surface, xen_pfn_t base)
+void surfman_surface_update_pfn_linear (surfman_surface_t * surface, xen_pfn_t base)
 {
   struct surface_priv *p = PRIV(surface);
 
@@ -218,5 +233,7 @@ surfman_surface_update_pfn_linear (surfman_surface_t * surface, xen_pfn_t base)
   p->u.pfn_linear.base = base;
   if (p->baseptr)
     update_mapping (p, surface->page_count * XC_PAGE_SIZE);
+  surface_update_mfn_list(surface);
   pthread_mutex_unlock (&p->lock);
 }
+

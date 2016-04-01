@@ -15,48 +15,50 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
-#define _GNU_SOURCE
-
 #include "project.h"
-#include <stdarg.h>
-#include <dlfcn.h>
-#include <execinfo.h>
 
-INTERNAL void
-bt(void)
+void fprint_backtrace(FILE *fstream)
 {
-  void *ba[256];
-  Dl_info info;
-  int i;
+    void *bta[256];
+    char **fnames;
+    int i, n;
 
-  int n = backtrace (ba, sizeof (ba) / sizeof (ba[0]));
-  if (!n)
-    return;
+    n = backtrace (bta, sizeof (bta) / sizeof (bta[0]));
+    fnames = backtrace_symbols (bta, n);
+    if (fnames == NULL)
+      {
+        perror ("backtrace_symbols:");
+        abort ();
+      }
 
+    for (i = 0; i < n; ++i)
+      fprintf (fstream, "%s\n", fnames[i]);
 
-  for (i = 0; i < n; ++i)
-    {
-      syslog (LOG_ERR, "libvgmch %d: %p", i, ba[i]);
-      if (dladdr (ba[i], &info))
-        {
-          char *base, *offset;
-
-          base = info.dli_saddr;
-          offset = ba[i];
-
-          syslog (LOG_ERR, "libvgmch (%s %s+0x%x)", info.dli_fname,
-                  info.dli_sname, (unsigned int) (offset - base));
-
-          syslog (LOG_ERR, "libvgmch backtrace: (%s %s+0x%x)", info.dli_fname,
-                  info.dli_sname, (unsigned int) (offset - base));
-        }
-
-    }
-
+    free (fnames);
 }
 
-EXTERNAL void
-surfman_vmessage(surfman_loglvl level, const char *fmt, va_list ap)
+void syslog_backtrace(int level)
+{
+    void *bta[256];
+    char **fnames;
+    int i, n;
+
+    n = backtrace (bta, sizeof (bta) / sizeof (bta[0]));
+    fnames = backtrace_symbols (bta, n);
+    if (fnames == NULL)
+      {
+        perror ("backtrace_symbols:");
+        abort ();
+      }
+
+    for (i = 0; i < n; ++i)
+      syslog (level, "%s", fnames[i]);
+
+    free (fnames);
+}
+
+
+void surfman_vmessage(surfman_loglvl level, const char *fmt, va_list ap)
 {
   va_list ap2;
   int syslog_lvl = LOG_DEBUG;
@@ -87,15 +89,15 @@ surfman_vmessage(surfman_loglvl level, const char *fmt, va_list ap)
 
   vfprintf(stderr, fmt, ap2);
 
-  if (level == MESSAGE_FATAL)
+  if (level == SURFMAN_FATAL)
     {
-      bt();
+      syslog_backtrace(LOG_ERR);
+      fprint_backtrace(stderr);
       abort();
     }
 }
 
-EXTERNAL void
-surfman_message(surfman_loglvl level, const char *fmt, ...)
+void surfman_message(surfman_loglvl level, const char *fmt, ...)
 {
   va_list ap;
 
@@ -104,88 +106,35 @@ surfman_message(surfman_loglvl level, const char *fmt, ...)
   va_end(ap);
 }
 
-EXTERNAL void
-message (int flags, const char *file, const char *function, int line,
-         const char *fmt, ...)
-{
-  char *level = NULL;
-  va_list ap;
-
-  if (flags & MESSAGE_INFO)
-    {
-      level = "Info";
-    }
-  else if (flags & MESSAGE_WARNING)
-    {
-      level = "Warning";
-    }
-  else if (flags & MESSAGE_ERROR)
-    {
-      level = "Error";
-    }
-  else if (flags & MESSAGE_FATAL)
-    {
-      level = "Fatal";
-    }
-
-  fprintf (stderr, "%s:%s:%s:%d:", level, file, function, line);
-
-  va_start (ap, fmt);
-  vfprintf (stderr, fmt, ap);
-  va_end (ap);
-
-  fprintf (stderr, "\n");
-  fflush (stderr);
-
-  if (flags & (MESSAGE_INFO | MESSAGE_WARNING | MESSAGE_ERROR | MESSAGE_FATAL))
-    {
-      syslog (LOG_ERR, "%s:%s:%s:%d:", level, file, function, line);
-
-      va_start (ap, fmt);
-      vsyslog (LOG_ERR, fmt, ap);
-      va_end (ap);
-    }
-
-  if (flags & MESSAGE_FATAL)
-    {
-      dump_backtrace ();
-      abort ();
-    }
-}
-
-EXTERNAL void *
-xcalloc (size_t n, size_t s)
+void *xcalloc (size_t n, size_t s)
 {
   void *ret = calloc (n, s);
   if (!ret)
-    fatal ("calloc failed");
+    surfman_fatal ("calloc failed");
   return ret;
 }
 
-EXTERNAL void *
-xmalloc (size_t s)
+void *xmalloc (size_t s)
 {
   void *ret = malloc (s);
   if (!ret)
-    fatal ("malloc failed");
+    surfman_fatal ("malloc failed");
   return ret;
 }
 
-EXTERNAL void *
-xrealloc (void *p, size_t s)
+void *xrealloc (void *p, size_t s)
 {
   p = realloc (p, s);
   if (!p)
-    fatal ("realloc failed");
+    surfman_fatal ("realloc failed");
   return p;
 }
 
-EXTERNAL char *
-xstrdup (const char *s)
+char *xstrdup (const char *s)
 {
   char *ret = strdup (s);
   if (!ret)
-    fatal ("strdup failed");
+    surfman_fatal ("strdup failed");
   return ret;
 }
 

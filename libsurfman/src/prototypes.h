@@ -24,13 +24,10 @@ extern char *xstrdup(const char *s);
 /* backtrace.c */
 extern void dump_backtrace(void);
 /* xc.c */
-extern xc_interface *xch;
-extern int privcmd_fd;
-extern struct xentoollog_logger xc_logger;
-extern int xc_has_vtd(void);
 extern void xc_init(void);
 extern int xc_domid_exists(int domid);
 extern void *xc_mmap_foreign(void *addr, size_t length, int prot, int domid, xen_pfn_t *pages);
+int xc_translate_gpfn_to_mfn (int domid, size_t pfn_count, xen_pfn_t *pfns, pfn_t *mfns);
 /* rect.c */
 extern int rect_from_dirty_bitmap(uint8_t *dirty, unsigned int width, unsigned int height, unsigned int stride, enum surfman_surface_format format, surfman_rect_t *rect);
 /* configfile.c */
@@ -40,8 +37,3 @@ extern int config_load_file(const char *filename);
 /* surface.c */
 extern void *surface_map(surfman_surface_t *surface);
 extern void surface_unmap(surfman_surface_t *surface);
-extern int surfman_surface_init(surfman_surface_t *surface);
-extern void surfman_surface_cleanup(surfman_surface_t *surface);
-extern void surfman_surface_update_mmap(surfman_surface_t *surface, int fd, size_t off);
-extern void surfman_surface_update_pfn_arr(surfman_surface_t *surface, const xen_pfn_t *pfns);
-extern void surfman_surface_update_pfn_linear(surfman_surface_t *surface, xen_pfn_t base);

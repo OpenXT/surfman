@@ -1,5 +1,6 @@
 aclocal.m4
 aclocal-copy
+ar-lib
 autom4te.cache/
 autoscan.log
 compile
@@ -66,8 +67,4 @@ core
 cscope.out
 
 libsurfman-config
-libsurfman-config.src
-libsurfman.pc.src
-surfman-head.h
-surfman.h
 version.sed

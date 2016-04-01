@@ -16,7 +16,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-INCLUDES = ${DBUS_CFLAGS}
+AM_CPPFLAGS = ${DBUS_CFLAGS}
 
 bin_PROGRAMS = screenshot
 SRCS=screenshot.c

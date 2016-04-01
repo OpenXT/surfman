@@ -15,9 +15,5 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #
-SUBDIRS=src app
+SUBDIRS = src app
 
-EXTRA_DIST= version-major version-minor version-micro version-files version-md5sums
-
-protos:
-	make -C src protos

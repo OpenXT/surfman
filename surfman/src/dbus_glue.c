@@ -182,14 +182,14 @@ dbus_set_visible (DBusMessage *msg, DBusMessage *reply)
 {
   DBusError err;
   dbus_bool_t ret;
-  uint32_t *domids; int domid_count;
+  uint32_t domid; int domid_count;
   uint32_t timeout;
   dbus_bool_t force;
   struct domain *d;
 
   dbus_error_init (&err);
   ret = dbus_message_get_args(msg, &err,
-                    DBUS_TYPE_ARRAY, DBUS_TYPE_INT32, &domids, &domid_count,
+                    DBUS_TYPE_INT32, &domid,
                     DBUS_TYPE_INT32, &timeout,
                     DBUS_TYPE_BOOLEAN, &force,
                     DBUS_TYPE_INVALID);
@@ -199,12 +199,12 @@ dbus_set_visible (DBusMessage *msg, DBusMessage *reply)
       return FALSE;
     }
 
-  surfman_info ("set_visible(%d,%d,%d)", domids[0], timeout, force);
+  surfman_info ("set_visible(%d,%d,%d)", domid, timeout, force);
 
-  d = domain_by_domid (domids[0]);
+  d = domain_by_domid (domid);
   if (!d)
     {
-      surfman_error ("Domain %d not found", domids[0]);
+      surfman_error ("Domain %d not found", domid);
       return FALSE;
     }
 

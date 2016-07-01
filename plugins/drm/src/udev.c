@@ -27,18 +27,17 @@ static inline struct udev_device *udev_device_new_from_list_entry(struct udev *u
     return udev_device_new_from_syspath(udev, udev_list_entry_get_name(entry));
 }
 
-INTERNAL int udev_process_subsystem(struct udev *udev, const char *subsystem,
-                                    void *(*action)(struct udev *, struct udev_device *))
+static int udev_process_subsystem_enum(struct udev *udev, const char *subsystem,
+                                       void *(*action)(struct udev *, struct udev_device *))
 {
     struct udev_enumerate *e;
     struct udev_list_entry *devs, *deve;
-    int rc;
+    int rc = -ENODEV;
 
     e = udev_enumerate_new(udev);
     if (!e) {
-        rc = -errno;
-        DRM_DBG("udev_enumerate_new failed (%s).", strerror(-rc));
-        return rc;
+        DRM_DBG("udev_enumerate_new failed (%s).", strerror(errno));
+        return -ENODEV;
     }
     udev_enumerate_add_match_is_initialized(e);
     udev_enumerate_add_match_subsystem(e, subsystem);
@@ -46,20 +45,72 @@ INTERNAL int udev_process_subsystem(struct udev *udev, const char *subsystem,
     udev_enumerate_scan_devices(e);
     devs = udev_enumerate_get_list_entry(e);
     if (!devs) {
-        rc = -errno;
-        DRM_DBG("udev_enumerate_get_list_entry failed (%s).", strerror(-rc));
+        DRM_DBG("udev_enumerate_get_list_entry failed (%s).", strerror(errno));
         udev_enumerate_unref(e);
-        return rc;
+        return -ENODEV;
     }
     udev_list_entry_foreach(deve, devs) {
         struct udev_device *d;
 
         d = udev_device_new_from_list_entry(udev, deve);
-        action(udev, d);
+        if (action(udev, d) != NULL)
+            rc = 0;
         udev_device_unref(d);
     }
     udev_enumerate_unref(e);
-    return 0;
+    return rc;
+}
+
+INTERNAL int udev_process_subsystem(struct udev *udev, const char *subsystem,
+                                    void *(*action)(struct udev *, struct udev_device *))
+{
+    int rc = 0;
+    fd_set readfds;
+    int udevfd;
+    struct timeval tv;
+    struct udev_monitor *udev_mon;
+    struct udev_device *udev_dev;
+
+    udev_mon = udev_monitor_new_from_netlink(udev, "udev");
+    udev_monitor_filter_add_match_subsystem_devtype(udev_mon, subsystem, NULL);
+    udev_monitor_enable_receiving(udev_mon);
+    udevfd = udev_monitor_get_fd(udev_mon);
+
+    do {
+        /* Try to enumerate to find our device in case it was already created */
+        if (!rc) {
+            if (!udev_process_subsystem_enum(udev, subsystem, action)) {
+                DRM_INF("Found %s device using enumeration.", subsystem);
+                break;
+            }
+        }
+
+        /* Try to monitor to find our device in case it has not been created */
+        FD_ZERO(&readfds);
+        FD_SET(udevfd, &readfds);
+        tv.tv_sec = 0;
+        tv.tv_usec = 1000;
+
+        rc = select(udevfd + 1, &readfds, NULL, NULL, &tv);
+        if (rc > 0 && FD_ISSET(udevfd, &readfds)) {
+            udev_dev = udev_monitor_receive_device(udev_mon);
+            if (!udev_dev) {
+                DRM_DBG("No device in monitor callback?");
+                continue;
+            }
+
+            if (action(udev, udev_dev) != NULL) {
+                DRM_INF("Found %s device using monitor.", subsystem);
+                udev_device_unref(udev_dev);
+                rc = 0;
+                break;
+            }
+            udev_device_unref(udev_dev);
+        }
+    } while (1);
+
+    udev_monitor_unref(udev_mon);
+    return rc;
 }
 
 /*

@@ -103,6 +103,7 @@ ioemugfx_display_get_info(void *priv,
   struct ioemugfx_device *dev = priv;
   struct monitor *m;
   int align;
+  uint16_t rounded_xres;
 
   surfman_info ("DisplayID:%d", msg->DisplayID);
 
@@ -117,7 +118,17 @@ ioemugfx_display_get_info(void *priv,
   out->max_xres = m->info->i.prefered_mode->htimings[0];
   out->max_yres = m->info->i.prefered_mode->vtimings[0];
 
-  surfman_info ("Monitor %d: Max resolution: %dx%d, stride alignment:%d",
+  /* Checking for resolutions that are not divisible by 8 and rounding them
+   * down. See the comment in plugins/drm/src/device-intel.c!should_avoid_scaling()
+   */
+  rounded_xres = out->max_xres & ~0x7;
+  if (rounded_xres != out->max_xres) {
+    surfman_info ("Monitor %d: Rounding down xres: %d -> %d",
+        msg->DisplayID, out->max_xres, rounded_xres);
+    out->max_xres = rounded_xres;
+  }
+
+  surfman_info ("Monitor %d: Max resolution: %dx%d, stride alignment: %d",
         msg->DisplayID, out->max_xres, out->max_yres, out->align);
 
   return 0;

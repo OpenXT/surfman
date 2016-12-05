@@ -105,7 +105,7 @@ ioemugfx_display_get_info(void *priv,
   int align;
   uint16_t rounded_xres;
 
-  surfman_info ("DisplayID:%d", msg->DisplayID);
+  surfman_debug ("DisplayID:%d", msg->DisplayID);
 
   m = display_get_monitor (msg->DisplayID);
   if (!m) {
@@ -123,12 +123,12 @@ ioemugfx_display_get_info(void *priv,
    */
   rounded_xres = out->max_xres & ~0x7;
   if (rounded_xres != out->max_xres) {
-    surfman_info ("Monitor %d: Rounding down xres: %d -> %d",
+    surfman_debug ("Monitor %d: Rounding down xres: %d -> %d",
         msg->DisplayID, out->max_xres, rounded_xres);
     out->max_xres = rounded_xres;
   }
 
-  surfman_info ("Monitor %d: Max resolution: %dx%d, stride alignment: %d",
+  surfman_debug ("Monitor %d: Max resolution: %dx%d, stride alignment: %d",
         msg->DisplayID, out->max_xres, out->max_yres, out->align);
 
   return 0;

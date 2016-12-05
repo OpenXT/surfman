@@ -53,9 +53,21 @@ extern "C"
     void surfman_message(surfman_loglvl level, const char *fmt, ...) __attribute__ ((format (printf, 2, 3)));
     void surfman_vmessage(surfman_loglvl level, const char *fmt, va_list ap);
 # define __log(level, level_string, fmt, ...) \
-    surfman_message(level, "%s:%s:%s:%d: " fmt "\n", level_string, __FILE__, __PRETTY_FUNCTION__, __LINE__, ## __VA_ARGS__)
+    surfman_message(level, "%s: " fmt "\n", level_string, ## __VA_ARGS__)
 
-# define surfman_debug(fmt, ...) __log(SURFMAN_DEBUG, "Debug", fmt, ## __VA_ARGS__)
+# ifdef NDEBUG
+#  define SURFMAN_DEBUG_PRINT 0
+# else
+#  define SURFMAN_DEBUG_PRINT 1
+#endif
+
+# define surfman_debug(fmt, ...) \
+    do { \
+        if (SURFMAN_DEBUG_PRINT) \
+            surfman_message(SURFMAN_DEBUG, "%s:%s:%d: " fmt, \
+                __FILE__, __PRETTY_FUNCTION__, __LINE__, ##__VA_ARGS__); \
+    } while (0)
+
 # define surfman_info(fmt, ...) __log(SURFMAN_INFO, "Info", fmt, ## __VA_ARGS__)
 # define surfman_warning(fmt, ...) __log(SURFMAN_WARNING, "Warning", fmt, ## __VA_ARGS__)
 # define surfman_error(fmt, ...) __log(SURFMAN_ERROR, "Error", fmt, ## __VA_ARGS__)

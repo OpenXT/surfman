@@ -204,14 +204,20 @@ domain_set_visible (struct domain *d, int force)
       struct device *dev = domain_active_device (d);
 
       if (dev)
-        rc = dev->ops->set_visible (dev);
+        {
+          rc = dev->ops->set_visible (dev);
+          if (rc)
+            surfman_warning("Failed to display domain %d on device %s",
+                            d->domid, dev->ops->name);
+        }
+      else
+        surfman_warning("Domain %d has no active device.", d->domid);
     }
+  else
+    surfman_warning("No visible domain.");
 
   if (rc)
-    {
-      surfman_error ("failed");
-      return rc;
-    }
+    return rc;
 
   rc = plugin_display_commit (force);
   if (rc)

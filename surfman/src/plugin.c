@@ -167,15 +167,6 @@ pci_vendor_match (const char *vendors)
       while ((device = pci_device_next(iter)))
         {
           pci_device_probe(device);
-          /* !! THE BLOC BELOW IS A NASTY HACK !! */
-          /* !! REMOVE IT WHEN AMD FIX THEIR PLUGIN !! */
-          if (!pci_device_is_boot_vga(device))
-            {
-              surfman_info("  - NOT using %04x:%04x at %02x:%02x.%02x, as it is NOT the primary adapter",
-                  device->vendor_id, device->device_id,
-                  device->bus, device->dev, device->func);
-              continue;
-            }
           surfman_info ("  - found %04x:%04x at %02x:%02x.%02x",
                   device->vendor_id, device->device_id,
                   device->bus, device->dev, device->func);

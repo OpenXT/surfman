@@ -161,8 +161,6 @@ dbus_set_pv_display (DBusMessage *msg, DBusMessage *reply)
       return FALSE;
     }
 
-  surfman_info ("set_pv_display(%d,%s)", domid, be_type);
-
   d = domain_by_domid (domid);
   if (!d)
     d = domain_create (domid);
@@ -198,8 +196,6 @@ dbus_set_visible (DBusMessage *msg, DBusMessage *reply)
       surfman_error ("Error getting message args: %s", err.message);
       return FALSE;
     }
-
-  surfman_info ("set_visible(%d,%d,%d)", domid, timeout, force);
 
   d = domain_by_domid (domid);
   if (!d)

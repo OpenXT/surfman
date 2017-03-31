@@ -100,8 +100,11 @@ int config_load_file (const char *filename)
 
   if (!f)
     {
-      surfman_error ("Failed to open %s: %s", filename, strerror (errno));
       return -1;
+    }
+  else
+    {
+      surfman_info ("Loading configuration file `%s'...", filename);
     }
 
   while ((len = getline (&line, &bufsz, f)) != -1)

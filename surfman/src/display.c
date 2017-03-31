@@ -189,9 +189,9 @@ get_monitor_info (struct plugin *plugin,
     }
 
   rc = PLUGIN_CALL (plugin, get_monitor_edid, m, &info->edid);
-  if (rc)
+  if (!rc)
     {
-      surfman_warning ("Plugin %s: get_monitor_edid() failed", plugin->name);
+      surfman_info ("Plugin %s: loaded EDID for monitor %p.", plugin->name, m);
     }
 
   /*

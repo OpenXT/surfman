@@ -69,6 +69,7 @@ AC_CHECK_HEADERS([xen/hvm/ioreq.h], [], AC_MSG_ERROR([ioreq header is missing.])
 AC_CHECK_HEADERS([xen/xen.h], [], AC_MSG_ERROR([xen header is missing.]))
 AC_CHECK_HEADERS([xen/sys/privcmd.h], [], AC_MSG_ERROR([privcmd header is missing.]), [
                   #include <stdint.h>
+                  #include <stddef.h>
                   #include <linux/ioctl.h>
                   #include <xen/xen.h>
                   ])

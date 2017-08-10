@@ -36,7 +36,6 @@ surfman_SOURCES = \
 	domain.c \
 	dbus_glue.c \
 	dbus.c \
-	util.c \
 	lockfile.c \
 	surface.c \
 	xenstore-helper.c \

@@ -89,8 +89,6 @@ int main (int argc, char *argv[])
   surfman_info ("Surfman API version "SURFMAN_VERSION_FMT".", SURFMAN_VERSION_ARGS (SURFMAN_API_VERSION));
 
   event_init ();
-  renable_core_dumps ();
-  trap_segv ();
 
   if (xenstore_init ())
     {

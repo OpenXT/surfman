@@ -113,6 +113,8 @@ int main(int argc, char **argv)
          "Saving screenshots for all screens, all domains in directory %s\n",
          dir);
 
+    dbus_error_init(&err);
+
     c = dbus_bus_get(DBUS_BUS_SYSTEM, &err);
 
     if (!c) {

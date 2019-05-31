@@ -25,33 +25,26 @@ static void hotplug_event_handler(int fd, short event, void *priv)
 {
     struct hotplug *hotplug = priv;
     struct udev_device *dev;
-    struct drm_device *d, *dd;
     const char *devnode;
 
     (void) fd;
     (void) event;
+
+    /* Notify surfman to rescan monitors.
+     * This will trigger a callback to the plugin on Surfman's terms. */
+    surfman_plugin.notify |= SURFMAN_NOTIFY_MONITOR_RESCAN;
+
     dev = udev_monitor_receive_device(hotplug->monitor);
     if (!dev) {
         DRM_WRN("Could not recover the device which triggered this udev event (%s).",
                 strerror(errno));
         return;
     }
+
     devnode = udev_device_get_devnode(dev);
     DRM_DBG("%s: %s (%s) triggred `%s' event.", udev_device_get_subsystem(dev),
             udev_device_get_sysname(dev), devnode, udev_device_get_action(dev));
-
-    /* TODO: Who knows... some cardX might appear, but we'll see that later. */
-    if (devnode) {
-        /* TODO: Those lists will require some sync mecanisms someday... */
-        list_for_each_entry_safe(d, dd, &devices, l) {
-            if (!strcmp(d->devnode, devnode)) {
-                drm_monitors_scan(d);
-                break;
-            }
-        }
-    }
     udev_device_unref(dev);
-    surfman_plugin.notify |= SURFMAN_NOTIFY_MONITOR_RESCAN;
     return;
 }
 

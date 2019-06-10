@@ -35,7 +35,7 @@ domain_dying (struct domain *d)
 {
   xc_dominfo_t info;
 
-  if (!xc_domid_getinfo (d->domid, &info))
+  if (xc_domid_getinfo (d->domid, &info) != 1)
     return 0;
   return info.dying;
 }

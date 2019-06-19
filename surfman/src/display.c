@@ -269,6 +269,11 @@ display_update_monitors (struct plugin *p,
     {
       struct monitor_info *info = get_monitor_info (p, monitors[i]);
 
+      /* The plugin does not recognize the monitor, or it was yanked quickly
+       * after being plugged. */
+      if (info == NULL)
+        continue;
+
       for (j = 0; j < DISPLAY_MONITOR_MAX; j++)
         {
           if (display[j].plugin == p &&

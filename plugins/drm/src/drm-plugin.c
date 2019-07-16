@@ -276,7 +276,7 @@ INTERNAL surfman_psurface_t drmp_get_psurface_from_surface(surfman_plugin_t *plu
     (void) plugin;
     struct drm_surface *s;
 
-    s = malloc(sizeof (*s));
+    s = calloc(1, sizeof (*s));
     if (!s) {
         DRM_ERR("Could not allocate memory (%s).", strerror(errno));
         return NULL;
@@ -292,6 +292,7 @@ INTERNAL surfman_psurface_t drmp_get_psurface_from_surface(surfman_plugin_t *plu
     }
     s->fb.pitch = surfman_surface->stride;
     s->fb.size = surfman_surface->page_count * XC_PAGE_SIZE;
+    s->fb.offset = surfman_surface->offset;
     s->fb.map = surface_map(surfman_surface);
     s->domid = surfman_surface->pages_domid;
 

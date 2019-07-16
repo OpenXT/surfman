@@ -142,7 +142,7 @@ static inline void framebuffer_dump(const char *indent, const struct framebuffer
     if (!fb) {
         DRM_DBG("%sframebuffer (%p) = { }", indent, fb);
     } else {
-        DRM_DBG("%sframebuffer (%p) = { %ux%u %u/%ubpp, %u stride, %u bytes, @%p:%lld }",
+        DRM_DBG("%sframebuffer (%p) = { %ux%u %u/%ubpp, %u stride, %u bytes, @%p:%ld }",
                 indent,
                 fb, fb->width, fb->height, fb->bpp, fb->depth, fb->pitch, fb->size,
                 fb->map, fb->offset);

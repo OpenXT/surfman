@@ -57,32 +57,14 @@ int xc_domid_exists(int domid)
 void *xc_mmap_foreign(void *addr, size_t length, int prot,
                       int domid, xen_pfn_t *pages)
 {
-  void *ret;
-  int rc;
-  privcmd_mmapbatch_t ioctlx;
-  size_t i;
+  (void) addr; /* This is munmaped in update_mappings. */
 
-  ret = mmap (addr, length, prot, MAP_SHARED, privcmd_fd, 0);
-  if (ret == MAP_FAILED)
-    return ret;
+  assert(xch != NULL);
+  assert(length > 0);
+  assert(pages != NULL); /* It's actually an array of pfns... */
 
-  ioctlx.num = (length + XC_PAGE_SIZE - 1) / XC_PAGE_SIZE;
-  ioctlx.dom = domid;
-  ioctlx.addr = (unsigned long)ret;
-  ioctlx.arr = pages;
-
-  rc = ioctl(privcmd_fd, IOCTL_PRIVCMD_MMAPBATCH, &ioctlx);
-
-  for (i = 0; i < length; i += XC_PAGE_SIZE)
-    pages[i >> XC_PAGE_SHIFT] &= ~XEN_DOMCTL_PFINFO_LTAB_MASK;
-
-  if (rc < 0)
-    {
-      munmap(ret, length);
-      ret = MAP_FAILED;
-    }
-
-  return ret;
+  return xc_map_foreign_pages (xch, domid, prot, pages,
+                              (length + XC_PAGE_SIZE - 1 >> XC_PAGE_SHIFT));
 }
 
 int xc_translate_gpfn_to_mfn (int domid, size_t pfn_count,

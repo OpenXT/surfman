@@ -50,6 +50,7 @@
 # include <sys/types.h>
 # include <sys/ioctl.h>
 
+# define XC_WANT_COMPAT_MAP_FOREIGN_API
 # include <xenctrl.h>
 # include <xen/sys/privcmd.h>
 # include <xen/hvm/ioreq.h>

@@ -78,6 +78,24 @@ static void surface_update_mfn_list (surfman_surface_t * surface)
   free(pfns);
 }
 
+static void surface_update_mfn_arr (surfman_surface_t * surface)
+{
+  struct surface_priv *p = PRIV(surface);
+  xen_pfn_t *pfns;
+  int rc;
+  int domid = surface->pages_domid;
+
+  assert(p->type == TYPE_PFN_ARR);
+
+  pfns = xcalloc(surface->page_count, sizeof (xen_pfn_t));
+  memcpy(pfns, p->u.pfn_arr.arr, surface->page_count * sizeof (xen_pfn_t));
+
+  if (xc_translate_gpfn_to_mfn (domid, surface->page_count, pfns, surface->mfns))
+    surfman_error ("Failed to translate gpfns for dom%d.", domid);
+
+  free(pfns);
+}
+
 static void update_mapping (struct surface_priv *p, size_t len)
 {
   size_t npages = (len + XC_PAGE_SIZE - 1) / XC_PAGE_SIZE;
@@ -97,23 +115,15 @@ static void update_mapping (struct surface_priv *p, size_t len)
                            p->u.mmap.offset);
         break;
       case TYPE_PFN_ARR:
-        pfns = malloc (npages * sizeof (*pfns));
-        if (!pfns)
-          break;
-
-        for (i = 0; i < npages; i++)
-          pfns[i] = p->u.pfn_arr.arr[i];
-
+        pfns = xcalloc (npages, sizeof (*pfns));
+        memcpy(pfns, p->u.pfn_arr.arr, npages * sizeof (*pfns));
         p->baseptr = xc_mmap_foreign (p->baseptr, len,
                                       PROT_READ | PROT_WRITE,
                                       p->u.pfn_arr.domid, pfns);
         free (pfns);
         break;
       case TYPE_PFN_LINEAR:
-        pfns = malloc (npages * sizeof (*pfns));
-        if (!pfns)
-          break;
-
+        pfns = xcalloc (npages, sizeof (*pfns));
         for (i = 0; i < npages; i++)
           pfns[i] = p->u.pfn_linear.base + i;
 
@@ -213,6 +223,7 @@ void surfman_surface_update_pfn_arr (surfman_surface_t * surface,
                                 const xen_pfn_t * pfns)
 {
   struct surface_priv *p = PRIV(surface);
+  xc_dominfo_t info;
 
   pthread_mutex_lock (&p->lock);
   p->type = TYPE_PFN_ARR;
@@ -220,6 +231,12 @@ void surfman_surface_update_pfn_arr (surfman_surface_t * surface,
   p->u.pfn_arr.arr = pfns;
   if (p->baseptr)
     update_mapping (p, surface->page_count * XC_PAGE_SIZE);
+
+  if (xc_domid_getinfo (surface->pages_domid, &info) != 1)
+      surfman_error ("Cannot retrieve dom%u information.", surface->pages_domid);
+  else if (info.hvm)
+    surface_update_mfn_arr (surface);
+
   pthread_mutex_unlock (&p->lock);
 }
 

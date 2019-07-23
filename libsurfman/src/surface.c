@@ -145,6 +145,59 @@ static void update_mapping (struct surface_priv *p, size_t len)
   p->len = len;
 }
 
+static int compare_pfns(const void *a, const void *b)
+{
+  const xen_pfn_t *pa = a, *pb = b;
+
+  return *pa - *pb;
+}
+
+/*
+ * Pin cache-attributes of a pfn range from a guest.
+ * On guests without auto-translation (full PV), this will return an error.
+ * While it may seem overkill to qsort() the pfns, there is no guaranty that
+ * this is a contiguous range of pfns. Most likely it is not, a virtual
+ * framebuffer will be allocated using vmalloc().
+ * xc_domain_pin_memory_cacheattr() is expensive though and pinning each page
+ * on its own will cause significant slow down at guest video initialization.
+ * Sorting the pfns and pinning contiguous ranges tries to mitigate that.
+ */
+static int surface_pin_cacheattr(surfman_surface_t * surface,
+                                 unsigned int cacheattr)
+{
+  struct surface_priv *p = PRIV(surface);
+  xen_pfn_t *pfns;
+  size_t i, j;
+  int rc;
+
+  pfns = malloc (surface->page_count * sizeof (pfns[0]));
+  if (!pfns)
+    return -ENOMEM;
+
+  memcpy(pfns, p->u.pfn_arr.arr, surface->page_count * sizeof (pfns[0]));
+
+  qsort (pfns, surface->page_count, sizeof (pfns[0]), &compare_pfns);
+  for (i = 0; i < surface->page_count; i = j)
+    {
+      for (j = i + 1;
+           (j < surface->page_count) && (pfns[j] == (pfns[j - 1] + 1));
+           ++j)
+        continue;
+
+      surfman_debug ("Pinning cacheattr on dom%u %#lx-%#lx.",
+                     surface->pages_domid, pfns[i], pfns[j - 1]);
+      rc = xc_hvm_pin_memory_cacheattr (surface->pages_domid,
+                                        pfns[i], pfns[j - 1],
+                                        XC_MAP_CACHEATTR_WC);
+      if (rc)
+        surfman_warning ("Failed to change cache attributes for dom%u %#lx-%#lx (%s).",
+                         surface->pages_domid, pfns[i], pfns[j - 1], strerror(-rc));
+    }
+  free (pfns);
+
+  return 0;
+}
+
 void *surface_map (surfman_surface_t * surface)
 {
   struct surface_priv *p = PRIV(surface);
@@ -224,6 +277,8 @@ void surfman_surface_update_pfn_arr (surfman_surface_t * surface,
 {
   struct surface_priv *p = PRIV(surface);
   xc_dominfo_t info;
+  xen_pfn_t *_pfns;
+  size_t i, j;
 
   pthread_mutex_lock (&p->lock);
   p->type = TYPE_PFN_ARR;
@@ -235,7 +290,11 @@ void surfman_surface_update_pfn_arr (surfman_surface_t * surface,
   if (xc_domid_getinfo (surface->pages_domid, &info) != 1)
       surfman_error ("Cannot retrieve dom%u information.", surface->pages_domid);
   else if (info.hvm)
-    surface_update_mfn_arr (surface);
+    {
+      if (surface_pin_cacheattr (surface, XC_MAP_CACHEATTR_WC))
+        surfman_error ("Failed to pin dom%u surface cache-attributes.", surface->pages_domid);
+      surface_update_mfn_arr (surface);
+    }
 
   pthread_mutex_unlock (&p->lock);
 }

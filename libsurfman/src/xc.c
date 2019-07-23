@@ -96,3 +96,8 @@ int xc_hvm_get_dirty_vram(int domid, uint64_t base_pfn, size_t n,
 {
   return xc_hvm_track_dirty_vram (xch, domid, base_pfn, n, db);
 }
+
+int xc_hvm_pin_memory_cacheattr(int domid, uint64_t pfn_start, uint64_t pfn_end, uint32_t type)
+{
+  return xc_domain_pin_memory_cacheattr(xch, domid, pfn_start, pfn_end, type);
+}

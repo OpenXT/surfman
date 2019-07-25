@@ -32,6 +32,20 @@
 
 #define XENFB_PAGE_SIZE 4096
 
+/*
+ * XenFB2 default framebuffer values.
+ * Idealy this should match the xenfb2 values to avoid unecessary resizing.
+ */
+#define XENFB2_DEFAULT_VIDEORAM (16 * 1024 * 1024)
+#define XENFB2_DEFAULT_WIDTH 1024
+#define XENFB2_DEFAULT_HEIGHT 768
+#define XENFB2_DEFAULT_BPP 32
+/* It is good practice to keep this a multiple of 64 to satisfy DRM
+ * requirements. */
+#define XENFB2_DEFAULT_PITCH \
+    (XENFB2_DEFAULT_WIDTH * XENFB2_DEFAULT_BPP / 8)
+#define XENFB2_DEFAULT_OFFSET 0
+
 static struct event backend_xenstore_event;
 
 struct xenfb_device;
@@ -257,14 +271,23 @@ xenfb_init (xen_device_t xendev)
 {
   struct xenfb_framebuffer *fb = xendev;
 
-  backend_print (fb->back, fb->devid, "default-xres", "%d", 1280);
-  backend_print (fb->back, fb->devid, "default-yres", "%d", 1024);
-  backend_print (fb->back, fb->devid, "default-bpp", "%d", 32);
-  backend_print (fb->back, fb->devid, "default-pitch", "%d", 4096);
+  backend_print (fb->back, fb->devid,
+    "default-xres", "%u", XENFB2_DEFAULT_WIDTH);
+  backend_print (fb->back, fb->devid,
+    "default-yres", "%u", XENFB2_DEFAULT_HEIGHT);
+  backend_print (fb->back, fb->devid,
+    "default-bpp", "%u", XENFB2_DEFAULT_BPP);
+  backend_print (fb->back, fb->devid,
+    "default-pitch", "%u", XENFB2_DEFAULT_PITCH);
+  backend_print (fb->back, fb->devid,
+    "videoram", "%u", XENFB2_DEFAULT_VIDEORAM);
 
-  backend_print (fb->back, fb->devid, "videoram", "%d", 16 * 1024 * 1024);
-
-  surface_update_format (fb->s, 1280, 1024, 4096, SURFMAN_FORMAT_BGRX8888, 0);
+  surface_update_format (fb->s,
+    XENFB2_DEFAULT_WIDTH,
+    XENFB2_DEFAULT_HEIGHT,
+    XENFB2_DEFAULT_PITCH,
+    SURFMAN_FORMAT_BGRX8888,
+    XENFB2_DEFAULT_OFFSET);
 
   return 0;
 }

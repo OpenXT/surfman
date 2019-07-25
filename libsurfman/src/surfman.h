@@ -618,6 +618,7 @@ int xc_domid_exists(int domid);
 int xc_domid_getinfo(int domid, xc_dominfo_t *info);
 void *xc_mmap_foreign(void *addr, size_t length, int prot, int domid, xen_pfn_t *pages);
 int xc_hvm_get_dirty_vram(int domid, uint64_t base_pfn, size_t n, unsigned long *db);
+int xc_hvm_pin_memory_cacheattr(int domid, uint64_t pfn_start, uint64_t pfn_end, uint32_t type);
 /* configfile.c */
 const char *config_get(const char *prefix, const char *key);
 const char *config_dump(void);

@@ -99,41 +99,42 @@ static int should_avoid_scaling(struct drm_monitor *monitor, struct drm_framebuf
  * - We are not able to scale down.
  * - We can manage scaled up framebuffer using planes or direct modesetting,
  *   but it is more flexible using planes. */
-static inline drmModeModeInfoPtr __find_mode(struct framebuffer *fb,
-                                             drmModeModeInfoPtr modes,
-                                             unsigned int count,
-                                             drmModeModeInfoPtr *fallback_mode)
+static inline int __find_mode(struct framebuffer *fb,
+                              drmModeModeInfoPtr modes, unsigned int count,
+                              drmModeModeInfoPtr mode,
+                              drmModeModeInfoPtr fallback_mode)
 {
     unsigned int i;
     unsigned int dh, dw, dl, odl = ~0L;   /* delta-width, delta-height, delta-length, old_delta-lenght. */
 
-    *fallback_mode = NULL;
     for (i = 0; i < count; ++i) {
         if ((modes[i].hdisplay == fb->width) &&
             (modes[i].vdisplay == fb->height)) {
             /* Found compatible mode. */
-            return &modes[i];
+            memcpy(mode, &modes[i], sizeof (modes[i]));
+            return 0;
+
         }
         if ((modes[i].hdisplay > fb->width) && (modes[i].vdisplay > fb->height)) {
             /* Lets avoid to crop. */
-            *fallback_mode = &modes[i];
+            memcpy(fallback_mode, &modes[i], sizeof (modes[i]));
             odl = 0;
         } else {
             dh = max(modes[i].hdisplay, fb->width) - min(modes[i].hdisplay, fb->width);
             dw = max(modes[i].vdisplay, fb->height) - min(modes[i].vdisplay, fb->height);
             dl = dh * dh + dw * dw;
             if (dl < odl) {
-                *fallback_mode = &modes[i];
+                memcpy(fallback_mode, &modes[i], sizeof (modes[i]));
                 odl = dl;
             }
         }
     }
-    return NULL;
+    return -1;
 }
 
-static inline drmModeModeInfoPtr __find_mode_cropped(struct framebuffer *fb,
-                                                     drmModeModeInfoPtr modes,
-                                                     unsigned int count)
+static int __find_mode_cropped(struct framebuffer *fb,
+                               drmModeModeInfoPtr modes, unsigned int count,
+                               drmModeModeInfoPtr mode)
 {
     unsigned int i;
 
@@ -141,10 +142,11 @@ static inline drmModeModeInfoPtr __find_mode_cropped(struct framebuffer *fb,
         if ((modes[i].hdisplay <= fb->width) &&
             (modes[i].vdisplay <= fb->height)) {
             /* Found compatible mode. */
-            return &modes[i];
+            memcpy(mode, &modes[i], sizeof (modes[i]));
+            return 0;
         }
     }
-    return &modes[0];
+    return -1;
 }
 
 /* Helper with DRM plumbings to create a plane. */
@@ -381,25 +383,22 @@ static int drm_connector_set_scaling(int fd, drmModeConnector *connector, int sc
  * @return The newly-create mode pointer, or NULL if allocation fails.
  *    This should be freed with free() when it is no longer needed.
  */
-static drmModeModeInfoPtr __create_mode_for_framebuffer(struct drm_monitor * monitor, struct drm_framebuffer * drmfb) {
+static int __create_mode_for_framebuffer(struct drm_monitor *monitor,
+                                         struct drm_framebuffer *drmfb,
+                                         drmModeModeInfoPtr mode) {
 
-    //Allocate a new ModeInfo object...
-    drmModeModeInfoPtr mode = malloc(sizeof(drmModeModeInfo));
+    // Upscaling cannot exceed the largest mode supported by the display.
+    if (monitor->prefered_mode.hdisplay < drmfb->fb.width ||
+        monitor->prefered_mode.vdisplay < drmfb->fb.height)
+        return -1;
 
-    // If we weren't able to allocate a block of memory for the mode, fail.
-    if(!mode) {
-      return NULL;
-    }
+    memcpy(mode, &monitor->prefered_mode, sizeof (drmModeModeInfo));
 
-    //... fill it with the monitor's preferred mode...
-    memcpy(mode, &monitor->prefered_mode, sizeof(drmModeModeInfo));
-
-    //... and override the width and height to match those of the target fb.
+    //Override the width and height to match those of the target fb.
     mode->hdisplay = drmfb->fb.width;
     mode->vdisplay = drmfb->fb.height;
 
-    //... and return our newly-created mode.
-    return mode;    
+    return 0;
 }
 
 
@@ -410,8 +409,7 @@ static int i915_modeset(struct drm_monitor *monitor, struct drm_framebuffer *drm
 {
     int rc = 0;
     drmModeConnector *con;
-    drmModeModeInfoPtr mode, fallback_mode;
-    drmModeModeInfoPtr synthetic_mode = NULL;
+    drmModeModeInfo mode = { 0 }, fallback_mode = { 0 };
     unsigned int crtc_x = 0, crtc_y = 0;
 
     con = drmModeGetConnector(monitor->device->fd, monitor->connector);
@@ -421,29 +419,17 @@ static int i915_modeset(struct drm_monitor *monitor, struct drm_framebuffer *drm
                 monitor->connector, monitor->device->devnode, strerror(errno));
         return rc;
     }
-    mode = __find_mode(&drmfb->fb, con->modes, con->count_modes, &fallback_mode);
-    if (!mode) {
+    if (__find_mode(&drmfb->fb, con->modes, con->count_modes,
+                    &mode, &fallback_mode)) {
 
         //If the monitor doesn't directly support the relevant mode, but
         //is connected via a connection that supports panel fitting, we can 
         //use that to scale to the monitor's preferred mdoe.
-        if(supports_panel_fitting(monitor->device->fd, con)) {
+        if (supports_panel_fitting(monitor->device->fd, con) &&
+            __create_mode_for_framebuffer(monitor, drmfb, &mode) >= 0) {
 
-            DRM_INF("It seems like we have a panel fitter...");
-
-            //Adopt the monitor's preferred mode.
-            mode = synthetic_mode = __create_mode_for_framebuffer(monitor, drmfb); 
-
-            //If we weren't able to allocate a synthetic mode, we have a very poor chance of recovering;
-            //we'll bail out as best we can.
-            if(!synthetic_mode) {
-               DRM_INF("... but we failed to allocate space for a new panel-fitting mode! Bailing out.");
-               goto fail_setcrtc;
-            }
-
-            DRM_INF("... using mode (%dx%d) to display a (%d x %d) framebuffer via the panel fitter.", 
-                    mode->hdisplay, mode->vdisplay, drmfb->fb.width, drmfb->fb.height);
-           
+            DRM_INF("Using mode (%dx%d) to display a (%d x %d) framebuffer via the panel fitter.", 
+                    mode.hdisplay, mode.vdisplay, drmfb->fb.width, drmfb->fb.height);
             //Use the DRM franmebuffer as is-- it should match our panel-fitting "synthetic"
             //mode.
             monitor->framebuffer = drmfb;
@@ -458,17 +444,17 @@ static int i915_modeset(struct drm_monitor *monitor, struct drm_framebuffer *drm
         /* The monitor does not handle this mode, but if the framebuffer is smaller we can stick it in a
          * plane on top of a blanked framebuffer.
          * Lets try to use a blanked framebuffer as small as possible. */
-        if (fallback_mode) {
+        if (fallback_mode.hdisplay != 0) {
 
             monitor->plane = i915_plane_new(drmfb, monitor->crtc);
             if (monitor->plane) {
                 /* XXX: I couldn't setup a plane without an underlying (useless) framebuffer.
                  *      We allocate it here. */
-                monitor->framebuffer = __dumb_framebuffer_create(monitor->device, fallback_mode->hdisplay,
-                                                                 fallback_mode->vdisplay, drmfb->fb.depth,
+                monitor->framebuffer = __dumb_framebuffer_create(monitor->device, fallback_mode.hdisplay,
+                                                                 fallback_mode.vdisplay, drmfb->fb.depth,
                                                                  drmfb->fb.bpp);
                 if (monitor->framebuffer) {
-                    mode = fallback_mode;
+                    memcpy(&mode, &fallback_mode, sizeof (mode));
                     goto modeset;   /* We're ready to modeset and compose the plane on top. */
                 }
                 /* Give up using a plane. */
@@ -482,20 +468,26 @@ static int i915_modeset(struct drm_monitor *monitor, struct drm_framebuffer *drm
 
          /* We couldn't setup a plane if the framebuffer is bigger or equal than the mode we might pull
           * this out by cropping at least on one dimension. Otherwise there's no point.*/
-        mode = __find_mode_cropped(&drmfb->fb, con->modes, con->count_modes);
-        if (drmfb->fb.width > mode->hdisplay) {
-            crtc_x = (drmfb->fb.width - mode->hdisplay) / 2;
+        if (__find_mode_cropped(&drmfb->fb, con->modes, con->count_modes, &mode) != 0) {
+            DRM_WRN("Failed to find compatibility mode for device \"%s\".", monitor->device->devnode);
+            rc = -EINVAL;
+            goto fail_setmaster;
         }
-        if (drmfb->fb.height > mode->vdisplay) {
-            crtc_y = (drmfb->fb.height - mode->vdisplay) / 2;
-        }
+        if (drmfb->fb.width > mode.hdisplay)
+            crtc_x = (drmfb->fb.width - mode.hdisplay) / 2;
+        if (drmfb->fb.height > mode.vdisplay)
+            crtc_y = (drmfb->fb.height - mode.vdisplay) / 2;
     }
     monitor->framebuffer = drmfb;
 
 modeset:
+    /* Connector was yanked, bail out. */
+    if (con->connection != DRM_MODE_CONNECTED) {
+        rc = -ENOENT;
+        goto fail_setmaster;
+    }
+
     rc = drm_device_set_master(monitor->device);
-
-
     if (rc) {
         DRM_ERR("Cannot perform modeset operation while something else is mastering `%s' (%s).",
                 monitor->device->devnode, strerror(-rc));
@@ -504,7 +496,7 @@ modeset:
 
     if (drmModeSetCrtc(monitor->device->fd, monitor->crtc, monitor->framebuffer->id,
                        crtc_x, crtc_y,
-                       &(monitor->connector), 1, mode)) {
+                       &(monitor->connector), 1, &mode)) {
         rc = -errno;
         DRM_ERR("Cannot display framebuffer %u in connector %u (%s).",
                 monitor->framebuffer->id, monitor->connector, strerror(errno));
@@ -537,11 +529,6 @@ modeset:
     }
 
     drm_device_drop_master(monitor->device);
-    
-    //If we've created a new mode, destroy the object that holds it.
-    if(synthetic_mode) {
-        free(synthetic_mode);
-    }
 
     return 0;
 
@@ -553,10 +540,6 @@ fail_setcrtc:
     drm_device_drop_master(monitor->device);
 fail_setmaster:
     drmModeFreeConnector(con);
-
-    if(synthetic_mode) {
-        free(synthetic_mode);
-    }
 
     return rc;
 }

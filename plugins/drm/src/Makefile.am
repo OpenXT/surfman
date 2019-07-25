@@ -28,12 +28,12 @@ SRCS =	drm-plugin.c			\
 	hotplug.c			\
 	backlight.c
 
-noinst_HEADERS = drm-plugin.h utils.h list.h project.h prototypes.h
+HDRS = drm-plugin.h utils.h list.h project.h prototypes.h
 
 plugindir = ${libdir}/surfman
 plugin_LTLIBRARIES = drm-plugin.la
 
-drm_plugin_la_SOURCES = ${SRCS}
+drm_plugin_la_SOURCES = ${SRCS} ${HDRS}
 drm_plugin_la_LDFLAGS = -module
 drm_plugin_la_CFLAGS = ${LIBUDEV_CFLAGS} ${LIBDRM_CFLAGS} ${LIBSURFMAN_CFLAGS} -W -Wall -Werror -g
 drm_plugin_la_CPPFLAGS = ${LIBUDEV_CFLAGS} ${LIBDRM_CFLAGS} ${LIBSURFMAN_CFLAGS}

@@ -190,6 +190,8 @@ INTERNAL struct drm_plane *drm_device_add_plane(struct drm_device *device, uint3
     p = drm_device_find_plane(device, plane);
     if (!p) {
         p = calloc(1, sizeof (*p));
+        if (!p)
+            return NULL;
         p->id = plane;
         p->device = device;
         list_add_tail(&p->l, &device->planes);

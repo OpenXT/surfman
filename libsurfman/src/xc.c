@@ -37,18 +37,21 @@ void xc_init (void)
     }
 }
 
-int xc_domid_exists (int domid)
-{
-  xc_dominfo_t info;
-  int rc;
-
-  rc = xc_domain_getinfo (xch, domid, 1, &info);
-  return rc >= 0 ? info.domid == (domid_t)domid : 0;
-}
-
 int xc_domid_getinfo(int domid, xc_dominfo_t *info)
 {
-  return xc_domain_getinfo (xch, domid, 1, info);
+  int rc;
+
+  rc = xc_domain_getinfo (xch, domid, 1, info);
+  if (rc == 1)
+    return info->domid == (domid_t)domid ? 1 : -ENOENT;
+  return rc;
+}
+
+int xc_domid_exists(int domid)
+{
+  xc_dominfo_t info = { 0 };
+
+  return !!xc_domid_getinfo(domid, &info);
 }
 
 void *xc_mmap_foreign(void *addr, size_t length, int prot,

@@ -183,9 +183,18 @@ INTERNAL int drm_monitors_scan(struct drm_device *device)
                     r->connectors[i], device->devnode, strerror(errno));
             continue;
         }
+
+        /* Disable DPMS now. LibDRM does not report prefered mode on disabled
+         * monitors. */
+        drmModeSetDpmsProp(device->fd, c, DRM_MODE_DPMS_ON);
+
         /* TODO: ok there's not many monitors for now... But complexity is pretty high
          *       there... Should be hash-tables really... */
         if (c->connection == DRM_MODE_CONNECTED) {
+            if (!c->count_modes) {
+                rc = -ENOENT;
+                break; /* The monitor does not report modes, skip it. */
+            }
             /* Either known or newly connected monitor. */
             if (!drm_device_add_monitor(device, c->connector_id, &c->modes[0])) {
                 rc = -ENOMEM;

@@ -18,107 +18,6 @@
 
 #include "project.h"
 
-/* Monitoring helper. */
-INTERNAL void drm_monitor_info(const struct drm_monitor *m)
-{
-    drmModeConnectorPtr con;
-    drmModeEncoderPtr enc;
-    drmModeCrtcPtr crtc;
-    int rc;
-
-    assert(m);
-    assert(m->device);
-
-    con = drmModeGetConnector(m->device->fd, m->connector);
-    if (!con) {
-        return; /* Silently give up. */
-    }
-    enc = drmModeGetEncoder(m->device->fd, con->encoder_id);
-    if (!enc) {
-        rc = errno;
-        DRM_INF("Connector:%d, %s, %s (%s)",
-                con->connector_id, connector_type_str(con->connector_type_id),
-                connector_status_str(con->connection),
-                ((con->connection == DRM_MODE_CONNECTED) && rc) ? strerror(rc) : "No encoder");
-    } else {
-        crtc = drmModeGetCrtc(m->device->fd, enc->crtc_id);
-        if (!crtc) {
-            rc = errno;
-            DRM_INF("Connector:%d, %s, %s -> Encoder:%d, %s (%s)",
-                    con->connector_id, connector_type_str(con->connector_type_id),
-                    connector_status_str(con->connection),
-                    enc->encoder_id, encoder_type_str(enc->encoder_type),
-                    rc ? strerror(rc) : "No CRTC");
-        } else {
-            if (!m->surface) {
-                DRM_INF("Connector:%d, %s, %s -> Encoder:%d, %s -> CRTC:%d, (%u,%u) %ux%u, mode:%s (%ux%u@%uHz)",
-                        con->connector_id, connector_type_str(con->connector_type_id),
-                        connector_status_str(con->connection),
-                        enc->encoder_id, encoder_type_str(enc->encoder_type),
-                        crtc->crtc_id, crtc->x, crtc->y, crtc->width, crtc->height,
-                        crtc->mode.name, crtc->mode.hdisplay, crtc->mode.vdisplay, crtc->mode.vrefresh);
-            } else {
-                DRM_INF("Connector:%d, %s, %s -> Encoder:%d, %s -> CRTC:%d, (%u,%u) %ux%u, mode:%s (%ux%u@%uHz), surface: dom%u",
-                        con->connector_id, connector_type_str(con->connector_type_id),
-                        connector_status_str(con->connection),
-                        enc->encoder_id, encoder_type_str(enc->encoder_type),
-                        crtc->crtc_id, crtc->x, crtc->y, crtc->width, crtc->height,
-                        crtc->mode.name, crtc->mode.hdisplay, crtc->mode.vdisplay, crtc->mode.vrefresh,
-                        m->surface->domid);
-            }
-            drm_mode_print(&(crtc->mode));
-            drmModeFreeCrtc(crtc);
-        }
-        drmModeFreeEncoder(enc);
-    }
-    drmModeFreeConnector(con);
-}
-
-/* Probes libDRM for monitors (connected connectors) and fill /monitors/ with it. */
-INTERNAL int drm_monitors_scan(struct drm_device *device)
-{
-    drmModeResPtr r;
-    unsigned int max;
-    int i, rc = 0;
-
-    r = drmModeGetResources(device->fd);
-    if (!r) {
-        rc = -errno;
-        DRM_WRN("Could not retrieve device \"%s\" resources (%s).",
-                device->devnode, strerror(errno));
-        return rc;
-    }
-    max = min(r->count_crtcs, r->count_connectors);
-    /* Those missing unsigned ... */
-    for (i = 0; (i < r->count_connectors) && (max != 0); ++i) {
-        drmModeConnector *c;
-
-        c = drmModeGetConnector(device->fd, r->connectors[i]);
-        if (!c) {
-            DRM_WRN("Could not access connector %u on device \"%s\" (%s).",
-                    r->connectors[i], device->devnode, strerror(errno));
-            continue;
-        }
-        /* TODO: ok there's not many monitors for now... But complexity is pretty high
-         *       there... Should be hash-tables really... */
-        if (c->connection == DRM_MODE_CONNECTED) {
-            /* Either known or newly connected monitor. */
-            if (!drm_device_add_monitor(device, c->connector_id, &c->modes[0])) {
-                rc = -ENOMEM;
-                break; /* Give up on memory errors. */
-            }
-            --max;
-        } else {
-            /* Unplugged monitor, check if we knew about that. */
-            drm_device_del_monitor(device, c->connector_id);
-            /* XXX: Since we rescan the entire libDRM list, don't touch max_monitors! */
-        }
-        drmModeFreeConnector(c);  /* libDRM id is enough for now. */
-    }
-    drmModeFreeResources(r);
-    return rc;
-}
-
 /*
  * Helper to get the DPMS property ID for this connector.
  */
@@ -200,6 +99,116 @@ int drm_monitor_dpms_off(struct drm_monitor *monitor)
 
     rc = drmModeSetDpmsProp(monitor->device->fd, c, DRM_MODE_DPMS_OFF);
     drmModeFreeConnector(c);
+    return rc;
+}
+
+/* Monitoring helper. */
+INTERNAL void drm_monitor_info(const struct drm_monitor *m)
+{
+    drmModeConnectorPtr con;
+    drmModeEncoderPtr enc;
+    drmModeCrtcPtr crtc;
+    int rc;
+
+    assert(m);
+    assert(m->device);
+
+    con = drmModeGetConnector(m->device->fd, m->connector);
+    if (!con) {
+        return; /* Silently give up. */
+    }
+    enc = drmModeGetEncoder(m->device->fd, con->encoder_id);
+    if (!enc) {
+        rc = errno;
+        DRM_INF("Connector:%d, %s, %s (%s)",
+                con->connector_id, connector_type_str(con->connector_type_id),
+                connector_status_str(con->connection),
+                ((con->connection == DRM_MODE_CONNECTED) && rc) ? strerror(rc) : "No encoder");
+    } else {
+        crtc = drmModeGetCrtc(m->device->fd, enc->crtc_id);
+        if (!crtc) {
+            rc = errno;
+            DRM_INF("Connector:%d, %s, %s -> Encoder:%d, %s (%s)",
+                    con->connector_id, connector_type_str(con->connector_type_id),
+                    connector_status_str(con->connection),
+                    enc->encoder_id, encoder_type_str(enc->encoder_type),
+                    rc ? strerror(rc) : "No CRTC");
+        } else {
+            if (!m->surface) {
+                DRM_INF("Connector:%d, %s, %s -> Encoder:%d, %s -> CRTC:%d, (%u,%u) %ux%u, mode:%s (%ux%u@%uHz)",
+                        con->connector_id, connector_type_str(con->connector_type_id),
+                        connector_status_str(con->connection),
+                        enc->encoder_id, encoder_type_str(enc->encoder_type),
+                        crtc->crtc_id, crtc->x, crtc->y, crtc->width, crtc->height,
+                        crtc->mode.name, crtc->mode.hdisplay, crtc->mode.vdisplay, crtc->mode.vrefresh);
+            } else {
+                DRM_INF("Connector:%d, %s, %s -> Encoder:%d, %s -> CRTC:%d, (%u,%u) %ux%u, mode:%s (%ux%u@%uHz), surface: dom%u",
+                        con->connector_id, connector_type_str(con->connector_type_id),
+                        connector_status_str(con->connection),
+                        enc->encoder_id, encoder_type_str(enc->encoder_type),
+                        crtc->crtc_id, crtc->x, crtc->y, crtc->width, crtc->height,
+                        crtc->mode.name, crtc->mode.hdisplay, crtc->mode.vdisplay, crtc->mode.vrefresh,
+                        m->surface->domid);
+            }
+            drm_mode_print(&(crtc->mode));
+            drmModeFreeCrtc(crtc);
+        }
+        drmModeFreeEncoder(enc);
+    }
+    drmModeFreeConnector(con);
+}
+
+/* Probes libDRM for monitors (connected connectors) and fill /monitors/ with it. */
+INTERNAL int drm_monitors_scan(struct drm_device *device)
+{
+    drmModeResPtr r;
+    unsigned int max;
+    int i, rc = 0;
+
+    r = drmModeGetResources(device->fd);
+    if (!r) {
+        rc = -errno;
+        DRM_WRN("Could not retrieve device \"%s\" resources (%s).",
+                device->devnode, strerror(errno));
+        return rc;
+    }
+    max = min(r->count_crtcs, r->count_connectors);
+    /* Those missing unsigned ... */
+    for (i = 0; (i < r->count_connectors) && (max != 0); ++i) {
+        drmModeConnector *c;
+
+        c = drmModeGetConnector(device->fd, r->connectors[i]);
+        if (!c) {
+            DRM_WRN("Could not access connector %u on device \"%s\" (%s).",
+                    r->connectors[i], device->devnode, strerror(errno));
+            continue;
+        }
+
+        /* Disable DPMS now. LibDRM does not report prefered mode on disabled
+         * monitors. */
+        drmModeSetDpmsProp(device->fd, c, DRM_MODE_DPMS_ON);
+
+        /* TODO: ok there's not many monitors for now... But complexity is pretty high
+         *       there... Should be hash-tables really... */
+        if (c->connection == DRM_MODE_CONNECTED) {
+            if (!c->count_modes) {
+                rc = -ENOENT;
+                break; /* The monitor does not report modes, skip it. */
+            }
+            /* Either known or newly connected monitor. */
+            if (!drm_device_add_monitor(device, c->connector_id, &c->modes[0])) {
+                rc = -ENOMEM;
+                break; /* Give up on memory errors. */
+            }
+            --max;
+        } else {
+            /* Unplugged monitor, check if we knew about that. */
+            drm_device_del_monitor(device, c->connector_id);
+            /* XXX: Since we rescan the entire libDRM list, don't touch max_monitors! */
+        }
+        drmModeFreeConnector(c);  /* libDRM id is enough for now. */
+    }
+    drmModeFreeResources(r);
     return rc;
 }
 

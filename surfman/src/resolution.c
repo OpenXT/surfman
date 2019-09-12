@@ -65,8 +65,21 @@ get_resolution_from_monitor(struct plugin *plugin, surfman_monitor_t monitor,
     internal_w = info->current_mode->htimings[SURFMAN_TIMING_ACTIVE];
     internal_h = info->current_mode->vtimings[SURFMAN_TIMING_ACTIVE];
 
-    if (internal_w && internal_w < 3000 && internal_h && internal_w < 3000)
-    {
+    /* If a component (internal_w or internal_h) is 0, fail.
+     * If a component is higher than 3000 and the other one can do 1920x1200, return 1920x1200.
+     * If both components are between 1 and 2999, return them as-is. */
+    if (!internal_w || !internal_h) {
+        surfman_warning("%s: get_monitor_info returned an invalid resolution: %d x %d",
+                        plugin->name, internal_w, internal_h);
+        return 0;
+    }
+    if (internal_w > 3000 || internal_h > 3000) {
+        surfman_warning("%s: get_monitor_info returned a resolution too big (%d x %d), defaulting to 1920x1200",
+                        plugin->name, internal_w, internal_h);
+        *w = 1920;
+        *h = 1200;
+        return 1;
+    } else {
         *w = internal_w;
         *h = internal_h;
         return 1;

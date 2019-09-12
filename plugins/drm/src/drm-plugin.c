@@ -235,11 +235,16 @@ INTERNAL int drmp_get_monitor_info(struct surfman_plugin *plugin, surfman_monito
     struct drm_monitor *m = monitor;
     struct drm_device *d = m->device;
     drmModeConnector *c;
-    unsigned int i;
+    unsigned int i, mode = 0;
 
     c = drmModeGetConnector(d->fd, m->connector);
     if (!c) {
         DRM_WRN("Could not access connector %u on device \"%s\" (%s).",
+                m->connector, m->device->devnode, strerror(errno));
+        return SURFMAN_ERROR;
+    }
+    if (!c->count_modes) {
+        DRM_WRN("0 modes found on connector %u on device \"%s\" (%s).",
                 m->connector, m->device->devnode, strerror(errno));
         return SURFMAN_ERROR;
     }
@@ -258,8 +263,16 @@ INTERNAL int drmp_get_monitor_info(struct surfman_plugin *plugin, surfman_monito
     }
     drmModeFreeConnector(c);
 
-    info->current_mode = &info->modes[0];
-    info->prefered_mode = &info->modes[0];
+    /* If we give back any value higher than 3000, surfman will override it.
+     * Try to find the highest resolution with both components below 3000. */
+    while (mode < modes_count - 1 &&
+           (info->modes[mode].htimings[SURFMAN_TIMING_ACTIVE] > 3000 ||
+            info->modes[mode].vtimings[SURFMAN_TIMING_ACTIVE] > 3000)) {
+        mode++;
+    }
+
+    info->current_mode = &info->modes[mode];
+    info->prefered_mode = &info->modes[mode];
     info->mode_count = modes_count;
     info->connectorid = m->connector;
 

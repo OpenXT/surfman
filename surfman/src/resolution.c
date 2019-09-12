@@ -55,8 +55,9 @@ get_resolution_from_monitor(struct plugin *plugin, surfman_monitor_t monitor,
     ret = PLUGIN_CALL (plugin, get_monitor_info, monitor, info, 20);
     if (ret)
     {
-        surfman_warning ("%s: get_monitor_info method failed.", plugin->name);
-        return ret;
+        surfman_warning ("%s: get_monitor_info method failed with error %d.",
+                         plugin->name, ret);
+        return 0;
     }
 
     if (info->mode_count <= 0)

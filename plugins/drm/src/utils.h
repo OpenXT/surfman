@@ -154,7 +154,7 @@ static inline void drm_framebuffer_dump(const char *indent, const struct drm_fra
     if (!drm) {
         DRM_DBG("%sdrm_framebuffer (%p) = { }", indent, drm);
     } else {
-        char ind[256];
+        char ind[257];
 
         sprintf(ind, "%s	", indent);
         DRM_DBG("%sdrm_framebuffer (%p) = { type=%s, handle=%u, id=%u,",

@@ -445,19 +445,6 @@ void plugin_dpms_off (void)
     }
 }
 
-#if 0
-void
-plugin_set_guest_resolution (unsigned int domid)
-{
-  struct plugin *p;
-
-  LIST_FOREACH (p, &plugin_list, link)
-    {
-      resolution_domain_on_monitor (domid, p, p->monitors[0]);
-    }
-}
-#endif
-
 unsigned int
 plugin_stride_align (void)
 {

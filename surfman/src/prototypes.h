@@ -123,7 +123,6 @@ extern unsigned int plugin_stride_align(void);
 extern int plugin_need_refresh(struct plugin *p);
 extern int plugin_display_commit(int force);
 /* resolution.c */
-extern void resolution_domain_on_monitor(unsigned int domid, struct plugin *plugin, surfman_monitor_t monitor);
 extern void resolution_refresh_current(struct plugin *plugin);
 extern void resolution_init(void);
 /* xenfb.c */

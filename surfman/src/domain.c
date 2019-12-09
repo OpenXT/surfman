@@ -100,9 +100,6 @@ domain_create (int domid)
 
   ret->domid = domid;
   LIST_INSERT_HEAD (&domain_list, ret, link);
-#if 0
-  plugin_set_guest_resolution (domid);
-#endif
   LIST_INIT (&ret->devices);
 
   return ret;

@@ -27,10 +27,16 @@ static void
 set_current_display_size(unsigned int x, unsigned int y)
 {
     char buf[256];
+    static unsigned int cx = 0, cy = 0;
+
+    if ((cx == x) && (cy == y))
+        return;
 
     snprintf(buf, 256, "%d %d", x, y);
-    /* surfman_info ("setting %s to %s\n", current_display_size_path, buf); */
-    xenstore_write (buf, current_display_size_path, buf);
+    surfman_info("setting %s to %s\n", current_display_size_path, buf);
+    xenstore_write(buf, current_display_size_path, buf);
+    cx = x;
+    cy = y;
 }
 
 /* XXX: This will have to go */
@@ -102,25 +108,6 @@ static void resolution_xs_read(unsigned int domid, unsigned int *w, unsigned int
             *h = internal_h;
         }
         free(tmp);
-    }
-}
-
-void 
-resolution_domain_on_monitor(unsigned int domid, struct plugin *plugin, surfman_monitor_t monitor)
-{
-    unsigned int w = 0, h = 0;
-    unsigned int xs_w = 0, xs_h = 0;
-    char buf[256];
-
-    if (!get_resolution_from_monitor(plugin, monitor, &w, &h))
-        return;
-    resolution_xs_read(domid, &xs_w, &xs_h);
-    if (xs_w != w || xs_h != h)
-    {
-        snprintf(buf, 256, "%d %d", w, h);
-        surfman_info ("setting /local/domain/%d/%s to %s\n", domid, display_size_path, buf);
-        xenstore_dom_write (domid, buf, display_size_path);
-        set_current_display_size(w, h);
     }
 }
 
